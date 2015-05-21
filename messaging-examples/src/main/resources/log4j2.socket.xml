@@ -1,0 +1,22 @@
+<Configuration status="INFO">
+    <Appenders>
+        <Socket name="Socket" host="127.0.0.1" port="5150">
+            <PatternLayout pattern="[%t] %-5level %logger{36} - %msg%n" charset="UTF-8"/>
+        </Socket>
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </Console>
+        <!--
+        <File name="File" fileName="example.log" immediateFlush="false" append="false">
+            <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </File>
+        -->
+    </Appenders>
+    <Loggers>
+        <Root level="DEBUG">
+            <AppenderRef ref="Socket" level="INFO" />
+            <AppenderRef ref="Console"/>
+        </Root>
+    </Loggers>
+
+</Configuration>

@@ -1,0 +1,1 @@
+include 'messaging-common', 'messaging-client', 'messaging-client-rx', 'messaging-examples', 'discovery-daemon', 'zookeeper-discovery-service'

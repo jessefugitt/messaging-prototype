@@ -1,0 +1,19 @@
+subprojects {
+    buildscript {
+        repositories {
+            mavenCentral()
+        }
+    }
+
+    apply plugin: 'java'
+
+    dependencies {
+        compile 'org.slf4j:slf4j-api:1.7.12'
+        testCompile 'junit:junit:4.11'
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+}
