@@ -61,7 +61,7 @@ public class AeronSendingTransport implements SendingTransport
     public long offer(Message message)
     {
         LOGGER.debug("Sending message of length={} with Aeron publication on channel={}, stream={}", message.getBufferLength(), channel, streamId);
-        return publication.offer(message.getBuffer());
+        return publication.offer(message.getBuffer(), message.getBufferOffset(), message.getBufferLength());
     }
 
     @Override

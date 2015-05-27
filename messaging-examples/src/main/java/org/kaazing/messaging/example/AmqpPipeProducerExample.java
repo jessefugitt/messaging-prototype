@@ -18,8 +18,7 @@ package org.kaazing.messaging.example;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageProducer;
 import org.kaazing.messaging.common.destination.Pipe;
-import org.kaazing.messaging.common.transport.BaseTransportContext;
-import org.kaazing.messaging.common.transport.amqp.AmqpProtonTransportContext;
+import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.io.IOException;
 
@@ -27,11 +26,11 @@ public class AmqpPipeProducerExample
 {
     public static void main(String[] args) throws IOException
     {
-        BaseTransportContext context = new AmqpProtonTransportContext();
+        MessagingDriver driver = new MessagingDriver();
 
         Pipe pipe = new Pipe("amqp://127.0.0.1:5672");
 
-        MessageProducer messageProducer = new MessageProducer(context, pipe);
+        MessageProducer messageProducer = new MessageProducer(driver, pipe);
 
         Message message = new Message(1024);
         message.getUnsafeBuffer().putInt(0, 567);
@@ -42,6 +41,6 @@ public class AmqpPipeProducerExample
         System.out.println("Sent message");
 
         messageProducer.close();
-        context.close();
+        driver.close();
     }
 }

@@ -17,9 +17,8 @@ package org.kaazing.messaging.example;
 
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.common.destination.Pipe;
+import org.kaazing.messaging.driver.MessagingDriver;
 import org.kaazing.messaging.rx.MessageConsumerRxAdapter;
-import org.kaazing.messaging.common.transport.BaseTransportContext;
-import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
 import rx.Observable;
 import rx.Subscription;
 
@@ -29,11 +28,11 @@ public class RxJavaPipeConsumerExample
 {
     public static void main(String[] args)
     {
-        BaseTransportContext context = new AeronTransportContext();
+        MessagingDriver driver = new MessagingDriver();
 
         Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124", 10);
 
-        Observable<Message> observableMessageConsumer = MessageConsumerRxAdapter.createObservable(context, pipe);
+        Observable<Message> observableMessageConsumer = MessageConsumerRxAdapter.createObservable(driver, pipe);
 
         Subscription subscription1 = observableMessageConsumer.subscribe(
                 (message) -> System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()))
@@ -73,6 +72,6 @@ public class RxJavaPipeConsumerExample
 
         subscription1.unsubscribe();
         subscription2.unsubscribe();
-        context.close();
+        driver.close();
     }
 }

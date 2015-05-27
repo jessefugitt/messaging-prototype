@@ -15,14 +15,14 @@
  */
 package org.kaazing.messaging.common.transport.aeron;
 
-import org.kaazing.messaging.common.transport.BaseTransportContext;
 import org.kaazing.messaging.common.transport.ReceivingTransport;
+import org.kaazing.messaging.common.transport.TransportContext;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class AeronTransportContext extends BaseTransportContext
+public class AeronTransportContext implements TransportContext
 {
     //TODO(JAF): Change this to be an interface scan instead of localhost
     public static final String DEFAULT_AERON_SUBSCRIPTION_CHANNEL = "aeron:udp?remote=127.0.0.1:40123";
@@ -50,20 +50,18 @@ public class AeronTransportContext extends BaseTransportContext
         return aeron;
     }
 
-    @Override
-    protected int doWork()
+    public int doReceiveWork(AtomicArray<ReceivingTransport> receivingTransports)
     {
-        if (getReceivingTransports().size() <= ++roundRobinIndex)
+        if (receivingTransports.size() <= ++roundRobinIndex)
         {
             roundRobinIndex = 0;
         }
-        return getReceivingTransports().doLimitedAction(roundRobinIndex, FRAGMENT_COUNT_LIMIT, pollAction);
+        return receivingTransports.doLimitedAction(roundRobinIndex, FRAGMENT_COUNT_LIMIT, pollAction);
     }
 
     @Override
     public void close()
     {
-        super.close();
         aeron.close();
         aeronContext.close();
     }

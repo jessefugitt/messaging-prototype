@@ -18,17 +18,16 @@ package org.kaazing.messaging.example;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageProducer;
 import org.kaazing.messaging.common.destination.Pipe;
-import org.kaazing.messaging.common.transport.BaseTransportContext;
-import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
+import org.kaazing.messaging.driver.MessagingDriver;
 
 public class RxJavaPipeProducerExample
 {
     public static void main(String[] args) throws InterruptedException {
-        BaseTransportContext context = new AeronTransportContext();
+        MessagingDriver driver = new MessagingDriver();
 
         Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124", 10);
 
-        MessageProducer messageProducer = new MessageProducer(context, pipe);
+        MessageProducer messageProducer = new MessageProducer(driver, pipe);
 
         for(int i = 0; i < 10; i++)
         {
@@ -44,6 +43,6 @@ public class RxJavaPipeProducerExample
 
         }
         messageProducer.close();
-        context.close();
+        driver.close();
     }
 }

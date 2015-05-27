@@ -20,9 +20,11 @@ version = '0.0.1'
 
 dependencies {
     compile project(':messaging-common')
-    compile project(':messaging-client')
-    compile project(':messaging-driver')
 
-    //RxJava
-    compile 'io.reactivex:rxjava:1.0.9'
+    compile 'uk.co.real-logic:Agrona:0.3.2-SNAPSHOT'
+    compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT'
+    compile 'uk.co.real-logic:aeron-common:0.1-SNAPSHOT'
+
+    //AMQP Proton
+    compile 'org.apache.qpid:proton-j:0.9'
 }

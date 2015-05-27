@@ -15,20 +15,25 @@
  */
 package org.kaazing.messaging.common.transport.amqp;
 
-import org.kaazing.messaging.common.transport.BaseTransportContext;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.impl.MessengerImpl;
+import org.kaazing.messaging.common.transport.ReceivingTransport;
+import org.kaazing.messaging.common.transport.TransportContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 
 import java.io.IOException;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
-public class AmqpProtonTransportContext extends BaseTransportContext
+public class AmqpProtonTransportContext implements TransportContext
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(AmqpProtonTransportContext.class);
+
     //TODO(JAF): Change this to be an interface scan instead of localhost
     public static final String DEFAULT_AMQP_SUBSCRIPTION_ADDRESS = "amqp://~127.0.0.1:5672";
     private final Messenger messenger;
@@ -36,11 +41,15 @@ public class AmqpProtonTransportContext extends BaseTransportContext
     private final AtomicInteger numSubscribers = new AtomicInteger(0);
     private final ConcurrentHashMap<String, Consumer<Message>> subscriptions = new ConcurrentHashMap<String, Consumer<Message>>();
 
-    public AmqpProtonTransportContext() throws IOException
+    public AmqpProtonTransportContext()
     {
         super();
         messenger = new MessengerImpl();
-        messenger.start();
+        try {
+            messenger.start();
+        } catch (IOException e) {
+            LOGGER.error("Error starting proton messenger", e);
+        }
     }
 
     protected Messenger getMessenger()
@@ -66,8 +75,7 @@ public class AmqpProtonTransportContext extends BaseTransportContext
         subscriptions.remove(address, subscription);
     }
 
-    @Override
-    protected int doWork()
+    public int doReceiveWork(AtomicArray<ReceivingTransport> receivingTransports)
     {
         int workDone = 0;
         if(numSubscribers.get() > 0)
@@ -94,7 +102,6 @@ public class AmqpProtonTransportContext extends BaseTransportContext
     @Override
     public void close()
     {
-        super.close();
         messenger.stop();
     }
 }

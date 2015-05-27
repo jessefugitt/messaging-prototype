@@ -18,8 +18,8 @@ package org.kaazing.messaging.example;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
 import org.kaazing.messaging.common.destination.Pipe;
-import org.kaazing.messaging.common.transport.BaseTransportContext;
 import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
+import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.util.function.Consumer;
 
@@ -29,11 +29,11 @@ public class PipeConsumerExample
     public static int message3Ctr = 0;
     public static void main(String[] args)
     {
-        BaseTransportContext context = new AeronTransportContext();
+        MessagingDriver driver = new MessagingDriver();
 
         Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124", 10);
 
-        MessageConsumer messageConsumer1 = new MessageConsumer(context, pipe, new Consumer<Message>() {
+        MessageConsumer messageConsumer1 = new MessageConsumer(driver, pipe, new Consumer<Message>() {
 
             @Override
             public void accept(Message message)
@@ -42,7 +42,7 @@ public class PipeConsumerExample
             }
         });
 
-        MessageConsumer messageConsumer2 = new MessageConsumer(context, pipe,
+        MessageConsumer messageConsumer2 = new MessageConsumer(driver, pipe,
                 //message -> System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()))
                 message ->
                 {
@@ -54,7 +54,7 @@ public class PipeConsumerExample
                 }
         );
 
-        MessageConsumer messageConsumer3 = new MessageConsumer(context, pipe,
+        MessageConsumer messageConsumer3 = new MessageConsumer(driver, pipe,
                 //message -> System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()))
                 message ->
                 {
@@ -78,6 +78,6 @@ public class PipeConsumerExample
         messageConsumer1.close();
         messageConsumer2.close();
         messageConsumer3.close();
-        context.close();
+        driver.close();
     }
 }

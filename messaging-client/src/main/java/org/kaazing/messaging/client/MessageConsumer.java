@@ -18,8 +18,9 @@ package org.kaazing.messaging.client;
 import org.kaazing.messaging.common.destination.MessageFlow;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.common.transport.ReceivingTransport;
-import org.kaazing.messaging.common.transport.TransportCommand;
+import org.kaazing.messaging.common.command.MessagingCommand;
 import org.kaazing.messaging.common.transport.TransportContext;
+import org.kaazing.messaging.driver.MessagingDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
@@ -31,17 +32,24 @@ public class MessageConsumer
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageConsumer.class);
 
-    private final TransportContext context;
+    private final MessagingDriver messagingDriver;
     private final MessageFlow messageFlow;
+    private long messageConsumerId;
     private final Consumer<Message> messageHandler;
-    private AtomicArray<ReceivingTransport> transports = new AtomicArray<ReceivingTransport>();
 
-    public MessageConsumer(TransportContext context, MessageFlow messageFlow, Consumer<Message> messageHandler)
+    public MessageConsumer(MessagingDriver messagingDriver, MessageFlow messageFlow, Consumer<Message> messageHandler)
     {
-        this.context = context;
+        this.messagingDriver = messagingDriver;
         this.messageFlow = messageFlow;
         this.messageHandler = messageHandler;
-        createReceivingTransports(messageFlow, messageHandler);
+
+        MessagingCommand messagingCommand = new MessagingCommand();
+        messagingCommand.setCommandCompletedAction(commandCompletedAction);
+        messagingCommand.setType(MessagingCommand.TYPE_CREATE_CONSUMER);
+        messagingCommand.setMessageFlow(messageFlow);
+        messagingCommand.setMessageHandler(messageHandler);
+
+        messagingDriver.enqueueCommand(messagingCommand);
     }
 
     public MessageFlow getMessageFlow()
@@ -49,50 +57,28 @@ public class MessageConsumer
         return messageFlow;
     }
 
-    protected void createReceivingTransports(MessageFlow messageFlow, Consumer<Message> messageHandler)
-    {
-        List<ReceivingTransport> receivingTransports = context.createReceivingTransports(messageFlow, messageHandler);
-        if(receivingTransports != null)
-        {
-            for(int i = 0; i < receivingTransports.size(); i++) {
-                TransportCommand transportCommand = new TransportCommand();
-                transportCommand.setCommandCompletedAction(commandCompletedAction);
-                transportCommand.setType(TransportCommand.TYPE_ADD_RECEIVING_TRANSPORT);
-                transportCommand.setReceivingTransport(receivingTransports.get(i));
-                context.enqueueCommand(transportCommand);
-            }
-        }
-    }
-
     /**
      * Removes all receiving transports from the message consumerand closes them
      */
     public void close()
     {
-        transports.forEach((receivingTransport) ->
-        {
-            TransportCommand transportCommand = new TransportCommand();
-            transportCommand.setCommandCompletedAction(commandCompletedAction);
-            transportCommand.setType(TransportCommand.TYPE_REMOVE_AND_CLOSE_RECEIVING_TRANSPORT);
-            transportCommand.setReceivingTransport(receivingTransport);
-            context.enqueueCommand(transportCommand);
-        });
+        MessagingCommand messagingCommand = new MessagingCommand();
+        messagingCommand.setType(MessagingCommand.TYPE_DELETE_CONSUMER);
+        messagingCommand.setMessageFlow(messageFlow);
+        messagingDriver.enqueueCommand(messagingCommand);
     }
 
-    private final Consumer<TransportCommand> commandCompletedAction = new Consumer<TransportCommand>() {
+    private final Consumer<MessagingCommand> commandCompletedAction = new Consumer<MessagingCommand>() {
         @Override
-        public void accept(TransportCommand transportCommand) {
-            if(transportCommand.getType() == TransportCommand.TYPE_ADD_RECEIVING_TRANSPORT && transportCommand.getReceivingTransport() != null) {
-                transports.add(transportCommand.getReceivingTransport());
-            }
-            else if(transportCommand.getType() == TransportCommand.TYPE_REMOVE_AND_CLOSE_RECEIVING_TRANSPORT && transportCommand.getReceivingTransport() != null)
+        public void accept(MessagingCommand messagingCommand) {
+
+            if(messagingCommand.getType() == MessagingCommand.TYPE_CREATE_CONSUMER)
             {
-                transports.remove(transportCommand.getReceivingTransport());
-                transportCommand.getReceivingTransport().close();
+                messageConsumerId = messagingCommand.getMessageConsumerId();
             }
             else
             {
-                LOGGER.warn("Unexpected transport command with type={} in MessageConsumer completed action", transportCommand.getType());
+                LOGGER.warn("Unexpected transport command with type={} in MessageConsumer completed action", messagingCommand.getType());
             }
         }
     };

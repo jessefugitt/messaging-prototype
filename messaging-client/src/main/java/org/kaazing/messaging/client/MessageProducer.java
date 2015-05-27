@@ -15,13 +15,18 @@
  */
 package org.kaazing.messaging.client;
 
+import org.kaazing.messaging.common.command.MessagingCommand;
 import org.kaazing.messaging.common.destination.MessageFlow;
 import org.kaazing.messaging.common.discovery.DiscoveryEvent;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.common.transport.*;
+import org.kaazing.messaging.driver.MessagingDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
+import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.ToLongBiFunction;
@@ -30,38 +35,26 @@ public class MessageProducer
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageProducer.class);
 
+    private final MessagingDriver messagingDriver;
     private final MessageFlow messageFlow;
-    private AtomicArrayWithArg<SendingTransport, Message> transports = new AtomicArrayWithArg<SendingTransport, Message>();
-    private final TransportContext context;
+    private OneToOneConcurrentArrayQueue<Message> sendQueue;
+    private OneToOneConcurrentArrayQueue<Message> freeQueue;
+    private int messageProducerIndex = -1;
+    private long messageProducerId;
 
-    public MessageProducer(BaseTransportContext context, MessageFlow messageFlow)
+    public MessageProducer(MessagingDriver messagingDriver, MessageFlow messageFlow)
     {
         this.messageFlow = messageFlow;
-        this.context = context;
-        createSendingTransports(messageFlow);
+        this.messagingDriver = messagingDriver;
 
-        TransportCommand transportCommand = new TransportCommand();
-        transportCommand.setCommandCompletedAction(commandCompletedAction);
-        transportCommand.setType(TransportCommand.TYPE_ADD_DISCOVERY_LISTENER);
-        transportCommand.setDiscoveryKey(messageFlow.getLogicalName());
-        transportCommand.setDiscoveredTransportsAction(discoveredTransportsAction);
-        context.enqueueCommand(transportCommand);
+        MessagingCommand messagingCommand = new MessagingCommand();
+        messagingCommand.setCommandCompletedAction(commandCompletedAction);
+        messagingCommand.setType(MessagingCommand.TYPE_CREATE_PRODUCER);
+        messagingCommand.setMessageFlow(messageFlow);
+        messagingDriver.enqueueCommand(messagingCommand);
     }
 
-    protected void createSendingTransports(MessageFlow messageFlow)
-    {
-        List<SendingTransport> sendingTransports = context.createSendingTransports(messageFlow);
-        if(sendingTransports != null)
-        {
-            for(int i = 0; i < sendingTransports.size(); i++) {
-                TransportCommand transportCommand = new TransportCommand();
-                transportCommand.setCommandCompletedAction(commandCompletedAction);
-                transportCommand.setType(TransportCommand.TYPE_ADD_SENDING_TRANSPORT);
-                transportCommand.setSendingTransport(sendingTransports.get(i));
-                context.enqueueCommand(transportCommand);
-            }
-        }
-    }
+
 
     public MessageFlow getMessageFlow()
     {
@@ -74,7 +67,7 @@ public class MessageProducer
      */
     public void submit(Message message)
     {
-        transports.doActionWithArg(0, submitAction, message);
+        throw new UnsupportedOperationException("Blocking submit call not currently supported");
     }
 
     /**
@@ -84,7 +77,27 @@ public class MessageProducer
      */
     public boolean offer(Message message)
     {
-        return transports.doActionWithArgToBoolean(0, offerAction, message);
+        boolean result = false;
+        if(sendQueue != null) {
+            Message sendMessage = freeQueue.poll();
+            if(sendMessage != null)
+            {
+                if(sendMessage.getBuffer().capacity() < message.getBufferLength())
+                {
+                    //TODO(JAF): Clean this up to not have to GC direct buffers
+                    UnsafeBuffer newBuffer = new UnsafeBuffer(ByteBuffer.allocateDirect(message.getBufferLength()));
+                    sendMessage.setBuffer(newBuffer);
+                }
+
+                sendMessage.setBufferLength(message.getBufferLength());
+                sendMessage.setBufferOffset(message.getBufferOffset());
+                sendMessage.getUnsafeBuffer().putBytes(message.getBufferOffset(), message.getBuffer(), message.getBufferOffset(), message.getBufferLength());
+
+                message.setMessageProducerIndex(messageProducerIndex);
+                result = sendQueue.offer(sendMessage);
+            }
+        }
+        return result;
     }
 
 
@@ -93,129 +106,30 @@ public class MessageProducer
      */
     public void close()
     {
-        TransportCommand transportCommand1 = new TransportCommand();
-        transportCommand1.setCommandCompletedAction(commandCompletedAction);
-        transportCommand1.setType(TransportCommand.TYPE_REMOVE_DISCOVERY_LISTENER);
-        transportCommand1.setDiscoveryKey(messageFlow.getLogicalName());
-        transportCommand1.setDiscoveredTransportsAction(discoveredTransportsAction);
-        context.enqueueCommand(transportCommand1);
+        MessagingCommand messagingCommand = new MessagingCommand();
+        messagingCommand.setMessageProducerIndex(messageProducerIndex);
+        messagingCommand.setType(MessagingCommand.TYPE_DELETE_PRODUCER);
+        messagingCommand.setMessageFlow(messageFlow);
+        messagingDriver.enqueueCommand(messagingCommand);
 
-        transports.forEach((sendingTransport) ->
-        {
-            TransportCommand transportCommand = new TransportCommand();
-            transportCommand.setCommandCompletedAction(commandCompletedAction);
-            transportCommand.setType(TransportCommand.TYPE_REMOVE_AND_CLOSE_SENDING_TRANSPORT);
-            transportCommand.setSendingTransport(sendingTransport);
-            context.enqueueCommand(transportCommand);
-        });
     }
 
-    private final ToLongBiFunction<SendingTransport, Message> submitAction = new ToLongBiFunction<SendingTransport, Message>()
-    {
-        @Override
-        public long applyAsLong(SendingTransport sendingTransport, Message message)
-        {
-            sendingTransport.submit(message);
-            return 0;
-        }
-    };
 
-    private final ToLongBiFunction<SendingTransport, Message> offerAction = new ToLongBiFunction<SendingTransport, Message>()
-    {
+    private final Consumer<MessagingCommand> commandCompletedAction = new Consumer<MessagingCommand>() {
         @Override
-        public long applyAsLong(SendingTransport sendingTransport, Message message)
-        {
-            return sendingTransport.offer(message);
-        }
-    };
-
-    private final Consumer<TransportCommand> commandCompletedAction = new Consumer<TransportCommand>() {
-        @Override
-        public void accept(TransportCommand transportCommand) {
-            if(transportCommand.getType() == TransportCommand.TYPE_ADD_SENDING_TRANSPORT && transportCommand.getSendingTransport() != null) {
-                transports.add(transportCommand.getSendingTransport());
-            }
-            else if(transportCommand.getType() == TransportCommand.TYPE_REMOVE_AND_CLOSE_SENDING_TRANSPORT && transportCommand.getSendingTransport() != null)
+        public void accept(MessagingCommand messagingCommand) {
+            if(messagingCommand.getType() == MessagingCommand.TYPE_CREATE_PRODUCER)
             {
-                transports.remove(transportCommand.getSendingTransport());
-                transportCommand.getSendingTransport().close();
-            }
-            else if(transportCommand.getType() == TransportCommand.TYPE_ADD_DISCOVERY_LISTENER ||
-                    transportCommand.getType() == TransportCommand.TYPE_REMOVE_DISCOVERY_LISTENER)
-            {
-                LOGGER.debug("Message producer command completed with type={}", transportCommand.getType());
+                messageProducerIndex = messagingCommand.getMessageProducerIndex();
+                messageProducerId = messagingCommand.getMessageProducerId();
+                freeQueue = messagingCommand.getFreeQueue();
+                sendQueue = messagingCommand.getSendQueue();
             }
             else
             {
-                LOGGER.warn("Unexpected transport command with type={} in MessageProducer completed action", transportCommand.getType());
+                LOGGER.warn("Unexpected transport command with type={} in MessageProducer completed action", messagingCommand.getType());
             }
         }
     };
 
-
-    private final Consumer<DiscoveryEvent<DiscoverableTransport>> discoveredTransportsAction = new Consumer<DiscoveryEvent<DiscoverableTransport>>()
-    {
-        @Override
-        public void accept(DiscoveryEvent<DiscoverableTransport> event)
-        {
-            List<DiscoverableTransport> added = event.getAdded();
-            List<DiscoverableTransport> removed = event.getRemoved();
-
-            //Handle updated later if necessary
-            List<DiscoverableTransport> updated = event.getUpdated();
-
-
-            if(added != null)
-            {
-                for(int i = 0; i < added.size(); i++)
-                {
-                    TransportHandle transportHandle = added.get(i).getTransportHandle();
-                    if(transportHandle != null)
-                    {
-                        //TODO(JAF): Refactor to avoid capture
-                        final String targetTransportHandleId = transportHandle.getId();
-                        SendingTransport match = transports.findFirst(
-                                (sendingTransport) -> targetTransportHandleId.equals(sendingTransport.getTargetTransportHandleId())
-                        );
-
-                        if(match == null)
-                        {
-                            SendingTransport sendingTransport = context.createSendingTransportFromHandle(transportHandle);
-                            TransportCommand transportCommand = new TransportCommand();
-                            transportCommand.setCommandCompletedAction(commandCompletedAction);
-                            transportCommand.setType(TransportCommand.TYPE_ADD_SENDING_TRANSPORT);
-                            transportCommand.setSendingTransport(sendingTransport);
-                            context.enqueueCommand(transportCommand);
-                        }
-                    }
-                }
-            }
-
-            if(removed != null)
-            {
-                for(int i = 0; i < removed.size(); i++)
-                {
-                    TransportHandle transportHandle = removed.get(i).getTransportHandle();
-                    if(transportHandle != null)
-                    {
-                        //TODO(JAF): Refactor to avoid capture
-                        final String targetTransportHandleId = transportHandle.getId();
-                        if(targetTransportHandleId != null)
-                        {
-                            transports.forEach((sendingTransport) ->
-                            {
-                                if(targetTransportHandleId.equals(sendingTransport.getTargetTransportHandleId())) {
-                                    TransportCommand transportCommand = new TransportCommand();
-                                    transportCommand.setCommandCompletedAction(commandCompletedAction);
-                                    transportCommand.setType(TransportCommand.TYPE_REMOVE_AND_CLOSE_SENDING_TRANSPORT);
-                                    transportCommand.setSendingTransport(sendingTransport);
-                                    context.enqueueCommand(transportCommand);
-                                }
-                            });
-                        }
-                    }
-                }
-            }
-        }
-    };
 }

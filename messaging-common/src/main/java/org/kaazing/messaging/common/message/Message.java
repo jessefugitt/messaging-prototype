@@ -23,10 +23,13 @@ import java.util.Properties;
 
 public class Message
 {
+    public static final int DEFAULT_BUFFER_SIZE = 4096;
     private DirectBuffer buffer;
     private Properties metadata;
     private int bufferOffset;
     private int bufferLength;
+
+    private int messageProducerIndex;
 
     /**
      * Creates a message without allocating an internal buffer
@@ -85,5 +88,15 @@ public class Message
     public Properties getMetadata()
     {
         return metadata;
+    }
+
+    public void setMessageProducerIndex(int messageProducerIndex)
+    {
+        this.messageProducerIndex = messageProducerIndex;
+    }
+
+    public int getMessageProducerIndex()
+    {
+        return messageProducerIndex;
     }
 }

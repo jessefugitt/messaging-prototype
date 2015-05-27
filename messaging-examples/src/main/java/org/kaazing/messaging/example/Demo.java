@@ -19,19 +19,18 @@ import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
 import org.kaazing.messaging.client.MessageProducer;
 import org.kaazing.messaging.common.destination.Topic;
-import org.kaazing.messaging.common.transport.BaseTransportContext;
-import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
+import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.util.function.Consumer;
 
 public class Demo
 {
     public static void main(String[] args) {
-        BaseTransportContext context = new AeronTransportContext();
+        MessagingDriver driver = new MessagingDriver();
 
         Topic topic = new Topic("STOCKS.ABC");
 
-        MessageConsumer messageConsumer1 = new MessageConsumer(context, topic, new Consumer<Message>()
+        MessageConsumer messageConsumer1 = new MessageConsumer(driver, topic, new Consumer<Message>()
         {
             @Override
             public void accept(Message message)
@@ -41,11 +40,11 @@ public class Demo
         });
 
 
-        MessageConsumer messageConsumer2 = new MessageConsumer(context, topic,
+        MessageConsumer messageConsumer2 = new MessageConsumer(driver, topic,
                 message -> System.out.println("Received message in lambda")
         );
 
-        MessageProducer messageProducer = new MessageProducer(context, topic);
+        MessageProducer messageProducer = new MessageProducer(driver, topic);
 
         Message message = new Message(1024);
         message.getUnsafeBuffer().putInt(0, 567);

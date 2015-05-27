@@ -18,39 +18,38 @@ package org.kaazing.messaging.example;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageProducer;
 import org.kaazing.messaging.common.destination.Pipe;
-import org.kaazing.messaging.common.transport.BaseTransportContext;
-import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
+import org.kaazing.messaging.driver.MessagingDriver;
 
 public class PipeProducerExample
 {
     public static void main(String[] args)
     {
-        BaseTransportContext context = new AeronTransportContext();
+        MessagingDriver driver = new MessagingDriver();
 
         Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124", 10);
 
-        MessageProducer messageProducer = new MessageProducer(context, pipe);
+        MessageProducer messageProducer = new MessageProducer(driver, pipe);
 
         Message message = new Message(1024);
         message.getUnsafeBuffer().putInt(0, 567);
         message.setBufferOffset(0);
         message.setBufferLength(4);
 
-        for(int i = 0; i < 10000000; )
+        for(int i = 0; i < 10; )
         {
             boolean result = messageProducer.offer(message);
             if(result)
             {
-                if((i + 1) % 100000 == 0)
-                {
+                //if((i + 1) % 100000 == 0)
+                //{
                     System.out.println("Sent message " + i + " with result: " + result);
-                }
+                //}
                 i++;
             }
-            //System.out.println("Sent message with result: " + result);
+            System.out.println("Sent message with result: " + result);
         }
 
         messageProducer.close();
-        context.close();
+        driver.close();
     }
 }

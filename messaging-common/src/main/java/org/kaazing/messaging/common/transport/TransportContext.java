@@ -15,6 +15,7 @@
  */
 package org.kaazing.messaging.common.transport;
 
+import org.kaazing.messaging.common.command.MessagingCommand;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.common.destination.MessageFlow;
 import org.kaazing.messaging.common.discovery.service.DiscoveryService;
@@ -24,10 +25,5 @@ import java.util.function.Consumer;
 
 public interface TransportContext
 {
-    public List<SendingTransport> createSendingTransports(MessageFlow messageFlow);
-    public SendingTransport createSendingTransportFromHandle(TransportHandle transportHandle);
-    public List<ReceivingTransport> createReceivingTransports(MessageFlow messageFlow, Consumer<Message> messageHandler);
-    public void setDiscoveryService(DiscoveryService<DiscoverableTransport> discoveryService);
-    public boolean enqueueCommand(TransportCommand command);
     public void close();
 }

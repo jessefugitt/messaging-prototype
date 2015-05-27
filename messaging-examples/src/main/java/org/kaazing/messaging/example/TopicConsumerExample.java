@@ -21,10 +21,8 @@ import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
 import org.kaazing.messaging.common.destination.Topic;
 import org.kaazing.messaging.common.discovery.service.DiscoveryService;
-import org.kaazing.messaging.common.transport.BaseTransportContext;
 import org.kaazing.messaging.common.transport.DiscoverableTransport;
-import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
-import org.kaazing.messaging.impl.discovery.service.discoverabletransport.zk.ZooKeeperDiscoveryService;
+import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.io.IOException;
 import java.util.function.Consumer;
@@ -34,16 +32,16 @@ public class TopicConsumerExample
 
     public static void main(String[] args) throws IOException
     {
-        BaseTransportContext context = new AeronTransportContext();
+        MessagingDriver driver = new MessagingDriver();
         DiscoveryService<DiscoverableTransport> discoveryService = new DynamicConsumerDiscoveryService("aeron:udp?remote=127.0.0.1:40001");
         //DiscoveryService<DiscoverableTransport> discoveryService = new ZooKeeperDiscoveryService("127.0.0.1:2181");
         //DiscoveryService<DiscoverableTransport> discoveryService = new PropertiesConfiguredDiscoveryService("topics.properties");
-        context.setDiscoveryService(discoveryService);
+        driver.setDiscoveryService(discoveryService);
         discoveryService.start();
 
         Topic topic = new Topic("STOCKS.ABC");
 
-        MessageConsumer messageConsumer1 = new MessageConsumer(context, topic, new Consumer<Message>() {
+        MessageConsumer messageConsumer1 = new MessageConsumer(driver, topic, new Consumer<Message>() {
 
             @Override
             public void accept(Message message)
@@ -52,7 +50,7 @@ public class TopicConsumerExample
             }
         });
 
-        MessageConsumer messageConsumer2 = new MessageConsumer(context, topic,
+        MessageConsumer messageConsumer2 = new MessageConsumer(driver, topic,
                 message -> System.out.println("Consumer2 received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()))
         );
 
@@ -66,6 +64,6 @@ public class TopicConsumerExample
 
         messageConsumer1.close();
         messageConsumer2.close();
-        context.close();
+        driver.close();
     }
 }

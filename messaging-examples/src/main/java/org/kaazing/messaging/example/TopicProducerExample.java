@@ -21,10 +21,8 @@ import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageProducer;
 import org.kaazing.messaging.common.destination.Topic;
 import org.kaazing.messaging.common.discovery.service.DiscoveryService;
-import org.kaazing.messaging.common.transport.BaseTransportContext;
 import org.kaazing.messaging.common.transport.DiscoverableTransport;
-import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
-import org.kaazing.messaging.impl.discovery.service.discoverabletransport.zk.ZooKeeperDiscoveryService;
+import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.io.IOException;
 
@@ -32,16 +30,16 @@ public class TopicProducerExample
 {
     public static void main(String[] args) throws IOException, InterruptedException
     {
-        BaseTransportContext context = new AeronTransportContext();
+        MessagingDriver driver = new MessagingDriver();
         DiscoveryService<DiscoverableTransport> discoveryService = new DynamicConsumerDiscoveryService("aeron:udp?remote=127.0.0.1:40001");
         //DiscoveryService<DiscoverableTransport> discoveryService = new ZooKeeperDiscoveryService("127.0.0.1:2181");
         //DiscoveryService<DiscoverableTransport> discoveryService = new PropertiesConfiguredDiscoveryService("topics.properties");
-        context.setDiscoveryService(discoveryService);
+        driver.setDiscoveryService(discoveryService);
         discoveryService.start();
 
         Topic topic = new Topic("STOCKS.ABC");
 
-        MessageProducer messageProducer = new MessageProducer(context, topic);
+        MessageProducer messageProducer = new MessageProducer(driver, topic);
 
 
         for(int i = 0; i < 5; i++)
@@ -57,6 +55,6 @@ public class TopicProducerExample
             Thread.sleep(10000);
         }
         messageProducer.close();
-        context.close();
+        driver.close();
     }
 }

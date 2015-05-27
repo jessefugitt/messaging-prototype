@@ -20,6 +20,7 @@ import org.kaazing.messaging.client.MessageConsumer;
 import org.kaazing.messaging.common.destination.MessageFlow;
 import org.kaazing.messaging.common.transport.AtomicArrayWithArg;
 import org.kaazing.messaging.common.transport.TransportContext;
+import org.kaazing.messaging.driver.MessagingDriver;
 import rx.Observable;
 import rx.Subscriber;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
@@ -30,7 +31,7 @@ import java.util.function.Consumer;
 
 public class MessageConsumerRxAdapter
 {
-    public static Observable<Message> createSingleSubscriberObservable(TransportContext context, MessageFlow messageFlow)
+    public static Observable<Message> createSingleSubscriberObservable(MessagingDriver driver, MessageFlow messageFlow)
     {
         Observable<Message> observableConsumer = Observable.create(new Observable.OnSubscribe<Message>()
         {
@@ -60,7 +61,7 @@ public class MessageConsumerRxAdapter
                             }
                         }
                     };
-                    messageConsumer = new MessageConsumer(context, messageFlow, messageHandler);
+                    messageConsumer = new MessageConsumer(driver, messageFlow, messageHandler);
                 }
                 else
                 {
@@ -72,7 +73,7 @@ public class MessageConsumerRxAdapter
         return observableConsumer;
     }
 
-    public static Observable<Message> createObservable(TransportContext context, MessageFlow messageFlow)
+    public static Observable<Message> createObservable(MessagingDriver driver, MessageFlow messageFlow)
     {
         final AtomicArrayWithArg<rx.Subscriber<? super Message>, Message> observers = new AtomicArrayWithArg<>();
 
@@ -100,7 +101,7 @@ public class MessageConsumerRxAdapter
                 }, message);
             }
         };
-        MessageConsumer messageConsumer = new MessageConsumer(context, messageFlow, messageHandler);
+        MessageConsumer messageConsumer = new MessageConsumer(driver, messageFlow, messageHandler);
 
         Observable<Message> observableConsumer = Observable.create(new Observable.OnSubscribe<Message>()
         {
