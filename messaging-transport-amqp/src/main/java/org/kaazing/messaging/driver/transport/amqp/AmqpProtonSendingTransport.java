@@ -13,10 +13,10 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport.amqp;
+package org.kaazing.messaging.driver.transport.amqp;
 
 import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.transport.SendingTransport;
+import org.kaazing.messaging.driver.transport.SendingTransport;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.impl.MessageImpl;
@@ -62,7 +62,10 @@ public class AmqpProtonSendingTransport implements SendingTransport
     @Override
     public long offer(Message message)
     {
-        throw new UnsupportedOperationException("non-blocking submit method is not supported with this transport");
+        submit(message);
+        //TODO(JAF): Support offer method with AMQP
+        //throw new UnsupportedOperationException("non-blocking submit method is not supported with this transport");
+        return 0;
     }
 
     @Override

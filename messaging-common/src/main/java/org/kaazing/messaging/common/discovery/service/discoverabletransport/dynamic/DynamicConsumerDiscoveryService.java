@@ -17,8 +17,8 @@ package org.kaazing.messaging.common.discovery.service.discoverabletransport.dyn
 
 import org.kaazing.messaging.common.discovery.DiscoveryEvent;
 import org.kaazing.messaging.common.discovery.service.DiscoveryService;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
-import org.kaazing.messaging.common.transport.AtomicArrayWithArg;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.agrona.collections.MutableInteger;

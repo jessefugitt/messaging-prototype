@@ -15,21 +15,20 @@
  */
 package org.kaazing.messaging.client;
 
-import org.kaazing.messaging.common.command.MessagingCommand;
+import org.kaazing.messaging.common.command.ClientCommand;
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.discovery.DiscoveryEvent;
 import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.transport.*;
 import org.kaazing.messaging.driver.MessagingDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
 import java.nio.ByteBuffer;
-import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.ToLongBiFunction;
 
 public class MessageProducer
 {
@@ -41,17 +40,23 @@ public class MessageProducer
     private OneToOneConcurrentArrayQueue<Message> freeQueue;
     private int messageProducerIndex = -1;
     private long messageProducerId;
+    private final IdleStrategy submitIdleStrategy = new BackoffIdleStrategy(
+            100, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
+
+    public MessageProducer(MessageFlow messageFlow)
+    {
+        this(MessagingDriver.getInstance(), messageFlow);
+    }
 
     public MessageProducer(MessagingDriver messagingDriver, MessageFlow messageFlow)
     {
         this.messageFlow = messageFlow;
         this.messagingDriver = messagingDriver;
 
-        MessagingCommand messagingCommand = new MessagingCommand();
-        messagingCommand.setCommandCompletedAction(commandCompletedAction);
-        messagingCommand.setType(MessagingCommand.TYPE_CREATE_PRODUCER);
-        messagingCommand.setMessageFlow(messageFlow);
-        messagingDriver.enqueueCommand(messagingCommand);
+        ClientCommand clientCommand = new ClientCommand(ClientCommand.TYPE_CREATE_PRODUCER);
+        clientCommand.setCommandCompletedAction(commandCompletedAction);
+        clientCommand.setMessageFlow(messageFlow);
+        messagingDriver.enqueueClientCommand(clientCommand);
     }
 
 
@@ -67,7 +72,12 @@ public class MessageProducer
      */
     public void submit(Message message)
     {
-        throw new UnsupportedOperationException("Blocking submit call not currently supported");
+        boolean result = offer(message);
+        while(result == false)
+        {
+            submitIdleStrategy.idle(0);
+            result = offer(message);
+        }
     }
 
     /**
@@ -106,28 +116,26 @@ public class MessageProducer
      */
     public void close()
     {
-        MessagingCommand messagingCommand = new MessagingCommand();
+        ClientCommand messagingCommand = new ClientCommand(ClientCommand.TYPE_DELETE_PRODUCER);
         messagingCommand.setMessageProducerIndex(messageProducerIndex);
-        messagingCommand.setType(MessagingCommand.TYPE_DELETE_PRODUCER);
         messagingCommand.setMessageFlow(messageFlow);
-        messagingDriver.enqueueCommand(messagingCommand);
-
+        messagingDriver.enqueueClientCommand(messagingCommand);
     }
 
 
-    private final Consumer<MessagingCommand> commandCompletedAction = new Consumer<MessagingCommand>() {
+    private final Consumer<ClientCommand> commandCompletedAction = new Consumer<ClientCommand>() {
         @Override
-        public void accept(MessagingCommand messagingCommand) {
-            if(messagingCommand.getType() == MessagingCommand.TYPE_CREATE_PRODUCER)
+        public void accept(ClientCommand clientCommand) {
+            if(clientCommand.getType() == ClientCommand.TYPE_CREATE_PRODUCER)
             {
-                messageProducerIndex = messagingCommand.getMessageProducerIndex();
-                messageProducerId = messagingCommand.getMessageProducerId();
-                freeQueue = messagingCommand.getFreeQueue();
-                sendQueue = messagingCommand.getSendQueue();
+                messageProducerIndex = clientCommand.getMessageProducerIndex();
+                messageProducerId = clientCommand.getMessageProducerId();
+                freeQueue = clientCommand.getFreeQueue();
+                sendQueue = clientCommand.getSendQueue();
             }
             else
             {
-                LOGGER.warn("Unexpected transport command with type={} in MessageProducer completed action", messagingCommand.getType());
+                LOGGER.warn("Unexpected transport command with type={} in MessageProducer completed action", clientCommand.getType());
             }
         }
     };

@@ -13,11 +13,26 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-apply plugin: 'java'
+package org.kaazing.messaging.driver.transport;
 
-sourceCompatibility = 1.8
-version = '0.0.1'
+import org.kaazing.messaging.common.message.Message;
 
-dependencies {
-    compile project(':messaging-common')
+public interface SendingTransport
+{
+    /**
+     * Blocking call to submit a message
+     * @param message
+     */
+    public void submit(Message message);
+
+    /**
+     * Non-blocking call to submit a message
+     * @param message
+     * @return true if successful or false otherwise
+     */
+    public long offer(Message message);
+
+    public String getTargetTransportHandleId();
+
+    public void close();
 }

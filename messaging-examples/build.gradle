@@ -25,6 +25,9 @@ dependencies {
     compile project(':messaging-driver')
     compile project(':zookeeper-discovery-service')
 
+    runtime project(':messaging-transport-aeron')
+    runtime project(':messaging-transport-amqp')
+
     //RxJava
     compile 'io.reactivex:rxjava:1.0.9'
     compile 'io.reactivex:rxjava-math:1.0.0'

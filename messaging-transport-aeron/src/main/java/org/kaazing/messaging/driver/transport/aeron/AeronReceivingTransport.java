@@ -13,11 +13,11 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport.aeron;
+package org.kaazing.messaging.driver.transport.aeron;
 
 import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
-import org.kaazing.messaging.common.transport.ReceivingTransport;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -52,7 +52,7 @@ public class AeronReceivingTransport implements ReceivingTransport, DataHandler
 
         this.subscription = aeronTransportContext.getAeron().addSubscription(channel, streamId, this);
         this.messageHandler = messageHandler;
-        this.handle = new TransportHandle(channel, TransportHandle.Type.Aeron, UUID.randomUUID().toString());
+        this.handle = new TransportHandle(channel, "aeron", UUID.randomUUID().toString());
     }
 
     @Override

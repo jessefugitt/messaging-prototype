@@ -13,13 +13,13 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport.amqp;
+package org.kaazing.messaging.driver.transport.amqp;
 
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.impl.MessengerImpl;
-import org.kaazing.messaging.common.transport.ReceivingTransport;
-import org.kaazing.messaging.common.transport.TransportContext;
+import org.kaazing.messaging.driver.transport.ReceivingTransport;
+import org.kaazing.messaging.driver.transport.TransportContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
@@ -81,6 +81,7 @@ public class AmqpProtonTransportContext implements TransportContext
         if(numSubscribers.get() > 0)
         {
             //TODO(JAF): Fix the concurrent modification exception when removing the last subscriber
+            messenger.setBlocking(false);
             messenger.recv();
             while (messenger.incoming() > 0)
             {
@@ -103,5 +104,13 @@ public class AmqpProtonTransportContext implements TransportContext
     public void close()
     {
         messenger.stop();
+        while(!messenger.stopped())
+        {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

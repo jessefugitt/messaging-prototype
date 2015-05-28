@@ -13,26 +13,12 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport;
+package org.kaazing.messaging.driver.transport;
 
-import org.kaazing.messaging.common.message.Message;
+import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
-public interface SendingTransport
+public interface TransportContext
 {
-    /**
-     * Blocking call to submit a message
-     * @param message
-     */
-    public void submit(Message message);
-
-    /**
-     * Non-blocking call to submit a message
-     * @param message
-     * @return true if successful or false otherwise
-     */
-    public long offer(Message message);
-
-    public String getTargetTransportHandleId();
-
     public void close();
+    public int doReceiveWork(AtomicArray<ReceivingTransport> receivingTransports);
 }

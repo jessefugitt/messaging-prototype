@@ -1,7 +1,7 @@
-package org.kaazing.messaging.driver;
+package org.kaazing.messaging.driver.mapping;
 
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.transport.ReceivingTransport;
+import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 import java.util.concurrent.ThreadLocalRandom;

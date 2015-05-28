@@ -13,17 +13,17 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport;
+package org.kaazing.messaging.driver.transport;
 
-import org.kaazing.messaging.common.command.MessagingCommand;
-import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.discovery.service.DiscoveryService;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.common.transport.TransportHandle;
 
-import java.util.List;
-import java.util.function.Consumer;
-
-public interface TransportContext
+public interface ReceivingTransport
 {
+    public TransportHandle getHandle();
     public void close();
+    public boolean isPollable();
+    public int poll(int limit);
+    public void setDiscoverableTransport(DiscoverableTransport discoverableTransport);
+    public DiscoverableTransport getDiscoverableTransport();
 }

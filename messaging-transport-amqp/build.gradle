@@ -13,14 +13,15 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport;
+apply plugin: 'java'
 
-public interface ReceivingTransport
-{
-    public TransportHandle getHandle();
-    public void close();
-    public boolean isPollable();
-    public int poll(int limit);
-    public void setDiscoverableTransport(DiscoverableTransport discoverableTransport);
-    public DiscoverableTransport getDiscoverableTransport();
+sourceCompatibility = 1.8
+version = '0.0.1'
+
+dependencies {
+    compile project(':messaging-common')
+    compile project(':messaging-driver')
+
+    //AMQP Proton
+    compile 'org.apache.qpid:proton-j:0.9'
 }

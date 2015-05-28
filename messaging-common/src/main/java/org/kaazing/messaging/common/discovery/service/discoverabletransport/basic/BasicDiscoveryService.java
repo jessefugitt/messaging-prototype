@@ -18,12 +18,10 @@ package org.kaazing.messaging.common.discovery.service.discoverabletransport.bas
 
 import org.kaazing.messaging.common.discovery.DiscoveryEvent;
 import org.kaazing.messaging.common.discovery.service.DiscoveryService;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
-import java.util.ArrayList;
 import java.util.Map;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;

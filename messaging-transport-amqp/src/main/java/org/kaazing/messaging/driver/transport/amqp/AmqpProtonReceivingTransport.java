@@ -13,11 +13,11 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport.amqp;
+package org.kaazing.messaging.driver.transport.amqp;
 
 import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
-import org.kaazing.messaging.common.transport.ReceivingTransport;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
@@ -50,7 +50,7 @@ public class AmqpProtonReceivingTransport implements ReceivingTransport, Consume
         amqpProtonTransportContext.getMessenger().subscribe(address);
         amqpProtonTransportContext.addSubscription(address, this);
         this.messageHandler = messageHandler;
-        this.handle = new TransportHandle(address, TransportHandle.Type.AMQP, UUID.randomUUID().toString());
+        this.handle = new TransportHandle(address, "amqp", UUID.randomUUID().toString());
     }
 
     @Override

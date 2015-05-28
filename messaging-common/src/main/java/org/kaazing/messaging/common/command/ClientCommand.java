@@ -1,21 +1,13 @@
 package org.kaazing.messaging.common.command;
 
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.discovery.DiscoveryEvent;
 import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
-import org.kaazing.messaging.common.transport.ReceivingTransport;
-import org.kaazing.messaging.common.transport.SendingTransport;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 
 import java.util.function.Consumer;
 
-public class MessagingCommand {
-    public static final int TYPE_ADD_SENDING_TRANSPORT = 1;
-    public static final int TYPE_REMOVE_AND_CLOSE_SENDING_TRANSPORT = 2;
-    public static final int TYPE_ADD_RECEIVING_TRANSPORT = 3;
-    public static final int TYPE_REMOVE_AND_CLOSE_RECEIVING_TRANSPORT = 4;
-
+public class ClientCommand implements Command
+{
     public static final int TYPE_CREATE_PRODUCER = 7;
     public static final int TYPE_DELETE_PRODUCER = 8;
     public static final int TYPE_CREATE_CONSUMER = 9;
@@ -30,39 +22,18 @@ public class MessagingCommand {
     private long messageConsumerId;
     private Consumer<Message> messageHandler;
 
-    private int type;
-    private SendingTransport sendingTransport;
-    private Consumer<MessagingCommand> commandCompletedAction;
+    private Consumer<ClientCommand> commandCompletedAction;
 
+    private final int type;
 
-    public void setType(int type)
+    public ClientCommand(int type)
     {
         this.type = type;
     }
 
-    public int getType()
-    {
+    @Override
+    public int getType() {
         return type;
-    }
-
-    public void setSendingTransport(SendingTransport sendingTransport)
-    {
-        this.sendingTransport = sendingTransport;
-    }
-
-    public SendingTransport getSendingTransport()
-    {
-        return sendingTransport;
-    }
-
-    public void setCommandCompletedAction(Consumer<MessagingCommand> commandCompletedAction)
-    {
-        this.commandCompletedAction = commandCompletedAction;
-    }
-
-    public Consumer<MessagingCommand> getCommandCompletedAction()
-    {
-        return commandCompletedAction;
     }
 
     public int getMessageProducerIndex() {
@@ -71,6 +42,14 @@ public class MessagingCommand {
 
     public void setMessageProducerIndex(int messageProducerIndex) {
         this.messageProducerIndex = messageProducerIndex;
+    }
+
+    public long getMessageProducerId() {
+        return messageProducerId;
+    }
+
+    public void setMessageProducerId(long messageProducerId) {
+        this.messageProducerId = messageProducerId;
     }
 
     public MessageFlow getMessageFlow() {
@@ -105,13 +84,6 @@ public class MessagingCommand {
         this.messageHandler = messageHandler;
     }
 
-    public long getMessageProducerId() {
-        return messageProducerId;
-    }
-
-    public void setMessageProducerId(long messageProducerId) {
-        this.messageProducerId = messageProducerId;
-    }
 
     public long getMessageConsumerId() {
         return messageConsumerId;
@@ -119,5 +91,15 @@ public class MessagingCommand {
 
     public void setMessageConsumerId(long messageConsumerId) {
         this.messageConsumerId = messageConsumerId;
+    }
+
+    public void setCommandCompletedAction(Consumer<ClientCommand> commandCompletedAction)
+    {
+        this.commandCompletedAction = commandCompletedAction;
+    }
+
+    public Consumer<ClientCommand> getCommandCompletedAction()
+    {
+        return commandCompletedAction;
     }
 }

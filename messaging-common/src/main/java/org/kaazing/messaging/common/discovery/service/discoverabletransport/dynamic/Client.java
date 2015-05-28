@@ -15,7 +15,7 @@
  */
 package org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic;
 
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 import java.util.concurrent.ThreadLocalRandom;

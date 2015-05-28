@@ -46,7 +46,14 @@ public class PipeProducerExample
                 //}
                 i++;
             }
+
             System.out.println("Sent message with result: " + result);
+        }
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
 
         messageProducer.close();

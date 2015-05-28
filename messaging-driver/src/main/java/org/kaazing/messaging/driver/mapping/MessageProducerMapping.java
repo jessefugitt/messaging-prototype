@@ -1,17 +1,13 @@
-package org.kaazing.messaging.driver;
+package org.kaazing.messaging.driver.mapping;
 
-import org.kaazing.messaging.common.command.MessagingCommand;
 import org.kaazing.messaging.common.destination.MessageFlow;
 import org.kaazing.messaging.common.discovery.DiscoveryEvent;
 import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.transport.AtomicArrayWithArg;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
-import org.kaazing.messaging.common.transport.SendingTransport;
-import org.kaazing.messaging.common.transport.TransportHandle;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
+import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.driver.transport.SendingTransport;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 
-import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 

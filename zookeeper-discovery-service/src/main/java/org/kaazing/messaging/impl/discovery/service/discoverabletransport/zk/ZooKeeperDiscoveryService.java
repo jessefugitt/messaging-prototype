@@ -19,7 +19,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.kaazing.messaging.common.discovery.DiscoveryEvent;
 import org.kaazing.messaging.common.discovery.service.DiscoveryService;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;

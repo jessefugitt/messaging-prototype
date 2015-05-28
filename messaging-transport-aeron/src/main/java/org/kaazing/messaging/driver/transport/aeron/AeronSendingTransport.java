@@ -13,10 +13,10 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport.aeron;
+package org.kaazing.messaging.driver.transport.aeron;
 
 import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.transport.SendingTransport;
+import org.kaazing.messaging.driver.transport.SendingTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.Publication;
@@ -47,6 +47,9 @@ public class AeronSendingTransport implements SendingTransport
         this.aeronTransportContext = aeronTransportContext;
         this.channel = channel;
         this.streamId = streamId;
+
+        LOGGER.info("Creating Aeron publication on channel={}, stream={}", channel, streamId);
+
         this.publication = aeronTransportContext.getAeron().addPublication(channel, streamId);
         this.targetTransportHandleId = targetTransportHandleId;
     }

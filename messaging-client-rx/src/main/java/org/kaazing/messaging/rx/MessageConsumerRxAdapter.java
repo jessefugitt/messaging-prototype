@@ -18,15 +18,10 @@ package org.kaazing.messaging.rx;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.transport.AtomicArrayWithArg;
-import org.kaazing.messaging.common.transport.TransportContext;
+import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
 import org.kaazing.messaging.driver.MessagingDriver;
 import rx.Observable;
-import rx.Subscriber;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
 
 public class MessageConsumerRxAdapter

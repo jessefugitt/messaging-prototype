@@ -13,10 +13,10 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport.aeron;
+package org.kaazing.messaging.driver.transport.aeron;
 
-import org.kaazing.messaging.common.transport.ReceivingTransport;
-import org.kaazing.messaging.common.transport.TransportContext;
+import org.kaazing.messaging.driver.transport.ReceivingTransport;
+import org.kaazing.messaging.driver.transport.TransportContext;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
@@ -24,9 +24,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class AeronTransportContext implements TransportContext
 {
-    //TODO(JAF): Change this to be an interface scan instead of localhost
-    public static final String DEFAULT_AERON_SUBSCRIPTION_CHANNEL = "aeron:udp?remote=127.0.0.1:40123";
-    public static final AtomicInteger globalStreamIdCtr = new AtomicInteger(10);
     private final static int FRAGMENT_COUNT_LIMIT = 10;
 
     private final Aeron.Context aeronContext;

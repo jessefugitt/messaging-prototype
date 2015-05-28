@@ -40,6 +40,12 @@ public class AmqpPipeProducerExample
         messageProducer.submit(message);
         System.out.println("Sent message");
 
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         messageProducer.close();
         driver.close();
     }

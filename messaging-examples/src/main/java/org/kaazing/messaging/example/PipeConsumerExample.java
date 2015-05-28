@@ -18,7 +18,6 @@ package org.kaazing.messaging.example;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
 import org.kaazing.messaging.common.destination.Pipe;
-import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
 import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.util.function.Consumer;

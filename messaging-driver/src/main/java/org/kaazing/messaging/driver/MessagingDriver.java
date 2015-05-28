@@ -15,30 +15,38 @@
  */
 package org.kaazing.messaging.driver;
 
-import org.kaazing.messaging.common.command.MessagingCommand;
+import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
+import org.kaazing.messaging.common.command.ClientCommand;
 import org.kaazing.messaging.common.destination.Pipe;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.discovery.DiscoveryEvent;
 import org.kaazing.messaging.common.message.Message;
 import org.kaazing.messaging.common.destination.MessageFlow;
 import org.kaazing.messaging.common.discovery.service.DiscoveryService;
 import org.kaazing.messaging.common.transport.*;
-import org.kaazing.messaging.common.transport.aeron.AeronReceivingTransport;
-import org.kaazing.messaging.common.transport.aeron.AeronSendingTransport;
-import org.kaazing.messaging.common.transport.aeron.AeronTransportContext;
-import org.kaazing.messaging.common.transport.amqp.AmqpProtonReceivingTransport;
-import org.kaazing.messaging.common.transport.amqp.AmqpProtonSendingTransport;
-import org.kaazing.messaging.common.transport.amqp.AmqpProtonTransportContext;
+import org.kaazing.messaging.driver.mapping.MessageConsumerMapping;
+import org.kaazing.messaging.driver.mapping.MessageProducerMapping;
+import org.kaazing.messaging.driver.transport.ReceivingTransport;
+import org.kaazing.messaging.driver.transport.SendingTransport;
+import org.kaazing.messaging.driver.transport.TransportContext;
+import org.kaazing.messaging.driver.transport.TransportFactory;
+
+import org.kaazing.messaging.driver.command.DriverCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.common.uri.AeronUri;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.*;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.ServiceLoader;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class MessagingDriver
@@ -52,9 +60,16 @@ public class MessagingDriver
 
     private final static int PER_PRODUCER_SEND_COUNT_LIMIT = 10;
 
-    private final static int FRAGMENT_COUNT_LIMIT = 10;
+    //TODO(JAF): Change this to be an interface scan instead of localhost
+    public static final String DEFAULT_AERON_SUBSCRIPTION_CHANNEL = "aeron:udp?remote=127.0.0.1:40123";
+    public static final AtomicInteger GLOBAL_STREAM_ID_CTR = new AtomicInteger(10);
 
     private DiscoveryService<DiscoverableTransport> discoveryService;
+
+    private final ConcurrentHashMap<String, TransportFactory> cachedTransportFactories = new ConcurrentHashMap<String, TransportFactory>();
+
+    private final AtomicArrayWithArg<TransportContext, AtomicArray<ReceivingTransport>> activeReceiverTransportContexts = new AtomicArrayWithArg<>();
+    private final ConcurrentHashMap<String, TransportContext> transportContextsMap = new ConcurrentHashMap<>();
     //Single writer with lock free readers
     private final AtomicArray<ReceivingTransport> pollableReceivingTransports = new AtomicArray<ReceivingTransport>();
 
@@ -65,10 +80,8 @@ public class MessagingDriver
     private final MessageConsumerMapping[] messageConsumerMappings = new MessageConsumerMapping[MESSAGE_CONSUMER_DEFAULT_CAPACITY];
 
 
-    private final ManyToOneConcurrentArrayQueue<MessagingCommand> commandQueue = new ManyToOneConcurrentArrayQueue<MessagingCommand>(COMMAND_QUEUE_DEFAULT_CAPACITY);
-
-    private AeronTransportContext aeronTransportContext;
-    private AmqpProtonTransportContext amqpTransportContext;
+    private final ManyToOneConcurrentArrayQueue<ClientCommand> clientCommandQueue = new ManyToOneConcurrentArrayQueue<>(COMMAND_QUEUE_DEFAULT_CAPACITY);
+    private final ManyToOneConcurrentArrayQueue<DriverCommand> driverCommandQueue = new ManyToOneConcurrentArrayQueue<>(COMMAND_QUEUE_DEFAULT_CAPACITY);
 
     private final ExecutorService executor = Executors.newFixedThreadPool(1);
     private final AtomicBoolean running = new AtomicBoolean(true);
@@ -85,23 +98,9 @@ public class MessagingDriver
     private final IdleStrategy receiveThreadIdleStrategy = new BackoffIdleStrategy(
             100, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
 
-    private synchronized AeronTransportContext getAeronTransportContext()
-    {
-        if(aeronTransportContext == null)
-        {
-            aeronTransportContext = new AeronTransportContext();
-        }
-        return aeronTransportContext;
-    }
+    private final IdleStrategy deleteIdleStrategy = new BackoffIdleStrategy(
+            100, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
 
-    private synchronized  AmqpProtonTransportContext getAmqpTransportContext()
-    {
-        if(amqpTransportContext == null)
-        {
-            amqpTransportContext = new AmqpProtonTransportContext();
-        }
-        return amqpTransportContext;
-    }
     /**
      * Intended for read only access to the transports
      * @return the atomic array of transports
@@ -111,11 +110,57 @@ public class MessagingDriver
         return pollableReceivingTransports;
     }
 
-    public boolean enqueueCommand(MessagingCommand command)
+
+
+    private static class MessagingSingletonLoader
     {
-        return commandQueue.offer(command);
+        private static final MessagingDriver INSTANCE = new MessagingDriver(true);
     }
 
+    //Only called by MessagingSingletonLoader
+    private MessagingDriver(boolean isSingleton) {
+        this();
+        if (MessagingSingletonLoader.INSTANCE != null) {
+            throw new IllegalStateException("Already instantiated");
+        }
+    }
+
+    public static MessagingDriver getInstance() {
+        return MessagingSingletonLoader.INSTANCE;
+    }
+
+
+    public MessagingDriver()
+    {
+        LOGGER.debug("Loading TransportFactory implementations...");
+        ServiceLoader<TransportFactory> transportFactoryServiceLoader = ServiceLoader.load(TransportFactory.class);
+        Iterator<TransportFactory> iterator = transportFactoryServiceLoader.iterator();
+        while(iterator.hasNext())
+        {
+            TransportFactory transportFactory = iterator.next();
+            LOGGER.debug("Found TransportFactory with scheme={}", transportFactory.getScheme());
+            cachedTransportFactories.put(transportFactory.getScheme(), transportFactory);
+        }
+
+        executor.execute(() -> runCommandThread());
+        sendThreadExecutor.execute(() -> runSendThread());
+        receiveThreadExecutor.execute(() -> runReceiveThread());
+    }
+
+    public boolean enqueueClientCommand(ClientCommand command)
+    {
+        return clientCommandQueue.offer(command);
+    }
+
+    public boolean enqueueDriverCommand(DriverCommand command)
+    {
+        return driverCommandQueue.offer(command);
+    }
+
+    public TransportFactory registerTransportFactory(String scheme, TransportFactory transportFactory)
+    {
+        return cachedTransportFactories.put(scheme, transportFactory);
+    }
 
     private int findNextProducerIndex()
     {
@@ -183,11 +228,10 @@ public class MessagingDriver
                             if(match == null)
                             {
                                 SendingTransport sendingTransport = createSendingTransportFromHandle(transportHandle);
-                                MessagingCommand messagingCommand = new MessagingCommand();
-                                messagingCommand.setMessageProducerIndex(producerMapping.getIndex());
-                                messagingCommand.setType(MessagingCommand.TYPE_ADD_SENDING_TRANSPORT);
-                                messagingCommand.setSendingTransport(sendingTransport);
-                                enqueueCommand(messagingCommand);
+                                DriverCommand driverCommand = new DriverCommand(DriverCommand.TYPE_ADD_SENDING_TRANSPORT);
+                                driverCommand.setMessageProducerIndex(producerMapping.getIndex());
+                                driverCommand.setSendingTransport(sendingTransport);
+                                enqueueDriverCommand(driverCommand);
                             }
                         }
                     }
@@ -209,11 +253,10 @@ public class MessagingDriver
                                 producerMapping.getSendingTransports().forEach((sendingTransport) ->
                                 {
                                     if (targetTransportHandleId.equals(sendingTransport.getTargetTransportHandleId())) {
-                                        MessagingCommand messagingCommand = new MessagingCommand();
-                                        messagingCommand.setMessageProducerIndex(producerMapping.getIndex());
-                                        messagingCommand.setType(MessagingCommand.TYPE_REMOVE_AND_CLOSE_SENDING_TRANSPORT);
-                                        messagingCommand.setSendingTransport(sendingTransport);
-                                        enqueueCommand(messagingCommand);
+                                        DriverCommand driverCommand = new DriverCommand(DriverCommand.TYPE_REMOVE_AND_CLOSE_SENDING_TRANSPORT);
+                                        driverCommand.setMessageProducerIndex(producerMapping.getIndex());
+                                        driverCommand.setSendingTransport(sendingTransport);
+                                        enqueueDriverCommand(driverCommand);
                                     }
                                 });
                             }
@@ -266,6 +309,22 @@ public class MessagingDriver
             long hash = producerMapping.getMessageFlow().getLogicalName().hashCode();
             AtomicArray<MessageProducerMapping> hashMatches = logicalNameToProducerMap.get(hash);
             hashMatches.remove(producerMapping);
+
+            //TODO(JAF): Implement a better way to delay closing until the send queue has a chance to be drained
+//            int maxWaitSeconds = 1;
+//            long start = System.nanoTime();
+//            int queueSize = producerMapping.getSendQueue().size();
+//            while(queueSize > 0)
+//            {
+//                deleteIdleStrategy.idle(0);
+//                long now = System.nanoTime();
+//                if(TimeUnit.NANOSECONDS.toSeconds(now - start) > maxWaitSeconds)
+//                {
+//                    break;
+//                }
+//                queueSize = producerMapping.getSendQueue().size();
+//            }
+
 
             producerSendQueues.remove(producerMapping.getSendQueue());
 
@@ -326,74 +385,79 @@ public class MessagingDriver
         }
     }
 
-    private final Consumer<MessagingCommand> commandConsumer = new Consumer<MessagingCommand>() {
+    private final Consumer<ClientCommand> clientCommandConsumer = new Consumer<ClientCommand>() {
         @Override
-        public void accept(MessagingCommand messagingCommand) {
+        public void accept(ClientCommand clientCommand) {
 
-            if(messagingCommand.getType() == MessagingCommand.TYPE_CREATE_PRODUCER)
+            if(clientCommand.getType() == ClientCommand.TYPE_CREATE_PRODUCER)
             {
                 int index = findNextProducerIndex();
-                messagingCommand.setMessageProducerIndex(index);
+                clientCommand.setMessageProducerIndex(index);
 
                 if(index != -1)
                 {
-                    MessageProducerMapping messageProducerMapping = createMessageProducer(messagingCommand.getMessageFlow(), index);
-                    messagingCommand.setMessageProducerId(messageProducerMapping.getId());
-                    messagingCommand.setFreeQueue(messageProducerMapping.getFreeQueue());
-                    messagingCommand.setSendQueue(messageProducerMapping.getSendQueue());
+                    MessageProducerMapping messageProducerMapping = createMessageProducer(clientCommand.getMessageFlow(), index);
+                    clientCommand.setMessageProducerId(messageProducerMapping.getId());
+                    clientCommand.setFreeQueue(messageProducerMapping.getFreeQueue());
+                    clientCommand.setSendQueue(messageProducerMapping.getSendQueue());
                 }
                 else
                 {
                     LOGGER.warn("Failed to create message producer because no index is available due to current size={}", messageProducerMappings.length);
                 }
             }
-            else if(messagingCommand.getType() == MessagingCommand.TYPE_DELETE_PRODUCER)
+            else if(clientCommand.getType() == ClientCommand.TYPE_DELETE_PRODUCER)
             {
-                deleteMessageProducer(messagingCommand.getMessageProducerIndex());
+                deleteMessageProducer(clientCommand.getMessageProducerIndex());
             }
-            else if(messagingCommand.getType() == MessagingCommand.TYPE_CREATE_CONSUMER)
+            else if(clientCommand.getType() == ClientCommand.TYPE_CREATE_CONSUMER)
             {
                 int index = findNextConsumerIndex();
-                MessageConsumerMapping messageConsumerMapping = createMessageConsumer(messagingCommand.getMessageFlow(), messagingCommand.getMessageHandler(), index);
-                messagingCommand.setMessageConsumerId(messageConsumerMapping.getId());
+                MessageConsumerMapping messageConsumerMapping = createMessageConsumer(clientCommand.getMessageFlow(), clientCommand.getMessageHandler(), index);
+                clientCommand.setMessageConsumerId(messageConsumerMapping.getId());
             }
-            else if(messagingCommand.getType() == MessagingCommand.TYPE_DELETE_CONSUMER)
+            else if(clientCommand.getType() == ClientCommand.TYPE_DELETE_CONSUMER)
             {
-                deleteMessageConsumer(messagingCommand.getMessageConsumerId());
-            }
-
-            else if(messagingCommand.getType() == MessagingCommand.TYPE_ADD_SENDING_TRANSPORT && messagingCommand.getSendingTransport() != null)
-            {
-                MessageProducerMapping producerMapping = messageProducerMappings[messagingCommand.getMessageProducerIndex()];
-                if(producerMapping != null)
-                {
-                    producerMapping.getSendingTransports().add(messagingCommand.getSendingTransport());
-                }
-            }
-            else if(messagingCommand.getType() == MessagingCommand.TYPE_REMOVE_AND_CLOSE_SENDING_TRANSPORT && messagingCommand.getSendingTransport() != null)
-            {
-                MessageProducerMapping producerMapping = messageProducerMappings[messagingCommand.getMessageProducerIndex()];
-                if(producerMapping != null)
-                {
-                    producerMapping.getSendingTransports().remove(messagingCommand.getSendingTransport());
-                }
-
-                messagingCommand.getSendingTransport().close();
+                deleteMessageConsumer(clientCommand.getMessageConsumerId());
             }
 
-            if(messagingCommand.getCommandCompletedAction() != null)
+            if(clientCommand.getCommandCompletedAction() != null)
             {
-                messagingCommand.getCommandCompletedAction().accept(messagingCommand);
+                clientCommand.getCommandCompletedAction().accept(clientCommand);
             }
         }
     };
 
-    public MessagingDriver()
-    {
-        executor.execute(() -> runCommandThread());
-        sendThreadExecutor.execute(() -> runSendThread());
-        receiveThreadExecutor.execute(() -> runReceiveThread());
-    }
+    private final Consumer<DriverCommand> driverCommandConsumer = new Consumer<DriverCommand>() {
+        @Override
+        public void accept(DriverCommand driverCommand) {
+
+            if(driverCommand.getType() == DriverCommand.TYPE_ADD_SENDING_TRANSPORT && driverCommand.getSendingTransport() != null)
+            {
+                MessageProducerMapping producerMapping = messageProducerMappings[driverCommand.getMessageProducerIndex()];
+                if(producerMapping != null)
+                {
+                    producerMapping.getSendingTransports().add(driverCommand.getSendingTransport());
+                }
+            }
+            else if(driverCommand.getType() == DriverCommand.TYPE_REMOVE_AND_CLOSE_SENDING_TRANSPORT && driverCommand.getSendingTransport() != null)
+            {
+                MessageProducerMapping producerMapping = messageProducerMappings[driverCommand.getMessageProducerIndex()];
+                if(producerMapping != null)
+                {
+                    producerMapping.getSendingTransports().remove(driverCommand.getSendingTransport());
+                }
+
+                driverCommand.getSendingTransport().close();
+            }
+
+            if(driverCommand.getCommandCompletedAction() != null)
+            {
+                driverCommand.getCommandCompletedAction().accept(driverCommand);
+            }
+        }
+    };
+
 
     protected int doWork()
     {
@@ -406,7 +470,8 @@ public class MessagingDriver
         {
             while (running.get())
             {
-                commandQueue.drain(commandConsumer);
+                clientCommandQueue.drain(clientCommandConsumer);
+                driverCommandQueue.drain(driverCommandConsumer);
                 int workDone = doWork();
                 idleStrategy.idle(workDone);
             }
@@ -458,14 +523,10 @@ public class MessagingDriver
             {
 
                 int workDone = 0;
-                if(aeronTransportContext != null)
-                {
-                    workDone += aeronTransportContext.doReceiveWork(getPollableReceivingTransports());
-                }
-                if(amqpTransportContext != null)
-                {
-                    workDone += amqpTransportContext.doReceiveWork(getPollableReceivingTransports());
-                }
+                workDone = activeReceiverTransportContexts.doActionWithArg(0,
+                        (transportContext, receivingTransports) -> transportContext.doReceiveWork(receivingTransports),
+                        getPollableReceivingTransports());
+
                 receiveThreadIdleStrategy.idle(workDone);
             }
         }
@@ -478,26 +539,66 @@ public class MessagingDriver
     public SendingTransport createSendingTransportFromHandle(TransportHandle transportHandle)
     {
         SendingTransport sendingTransport = null;
-        if(transportHandle.getType() == TransportHandle.Type.Aeron)
+        String scheme = null;
+        String address = null;
+        int streamId = 0;
+        if(transportHandle.getScheme().equalsIgnoreCase("aeron"))
         {
-            String channel = transportHandle.getPhysicalAddress();
-            int streamId = 0;
-            AeronUri aeronUri = AeronUri.parse(channel);
+            address = transportHandle.getPhysicalAddress();
+            AeronUri aeronUri = AeronUri.parse(address);
             if(aeronUri.get("streamId") != null)
             {
                 streamId = Integer.parseInt(aeronUri.get("streamId"));
             }
+            scheme = "aeron";
 
-            sendingTransport = new AeronSendingTransport(getAeronTransportContext(), channel, streamId, transportHandle.getId());
+
         }
-        else if(transportHandle.getType() == TransportHandle.Type.AMQP)
+        else if(transportHandle.getScheme().equalsIgnoreCase("amqp"))
         {
-            String address = transportHandle.getPhysicalAddress();
-            sendingTransport = new AmqpProtonSendingTransport(getAmqpTransportContext(), address, transportHandle.getId());
+            address = transportHandle.getPhysicalAddress();
+            scheme = "amqp";
         }
         else
         {
             throw new UnsupportedOperationException("Not yet supporting this type of transport");
+        }
+
+        if(scheme != null)
+        {
+            TransportContext transportContext = transportContextsMap.get(scheme);
+            TransportFactory transportFactory = cachedTransportFactories.get(scheme);
+            if(transportContext != null)
+            {
+                if(transportFactory != null)
+                {
+                    sendingTransport = transportFactory.createSendingTransport(transportContext, address, streamId, transportHandle.getId());
+                }
+                else
+                {
+                    throw new IllegalStateException("Cannot have a valid transportContext with no transportFactory for scheme " + scheme);
+                }
+            }
+            else
+            {
+                if(transportFactory != null)
+                {
+                    transportContext = transportFactory.createTransportContext();
+                    TransportContext existingContext = transportContextsMap.putIfAbsent(scheme, transportContext);
+                    if(existingContext != null)
+                    {
+                        LOGGER.warn("existing transport context should have been null but was {} for scheme {}", existingContext, scheme);
+                        transportContext.close();
+                        transportContext = existingContext;
+                    }
+
+                    sendingTransport = transportFactory.createSendingTransport(transportContext, address, streamId, transportHandle.getId());
+                }
+                else
+                {
+                    LOGGER.warn("Cannot create sending transport for scheme {} due to no matching transport factory", scheme);
+                }
+            }
         }
         return sendingTransport;
     }
@@ -510,47 +611,87 @@ public class MessagingDriver
     public void close()
     {
         running.set(false);
+        sendThreadRunning.set(false);
+        receiveThreadRunning.set(false);
+
         executor.shutdown();
         sendThreadExecutor.shutdown();
         receiveThreadExecutor.shutdown();
         try
         {
-            executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
-            sendThreadExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS);
-            receiveThreadExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+            executor.awaitTermination(10000, TimeUnit.MILLISECONDS);
+            sendThreadExecutor.awaitTermination(10000, TimeUnit.MILLISECONDS);
+            receiveThreadExecutor.awaitTermination(10000, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e)
         {
             e.printStackTrace();
         }
-        if(aeronTransportContext != null)
-        {
-            getAeronTransportContext().close();
-            aeronTransportContext = null;
-        }
-        if(amqpTransportContext != null)
-        {
-            getAmqpTransportContext().close();
-            amqpTransportContext = null;
-        }
+
+        transportContextsMap.clear();
+
+        activeReceiverTransportContexts.forEach(transportContext -> {
+            transportContext.close();
+        });
+        activeReceiverTransportContexts.clear();
     }
 
     public SendingTransport createSendingTransport(MessageFlow messageFlow)
     {
+        SendingTransport sendingTransport = null;
         if (messageFlow instanceof Pipe)
         {
             Pipe pipe = (Pipe) messageFlow;
             String address = pipe.getLogicalName();
+            //TODO(JAF): Replace with proper scheme parsing
+            String scheme = null;
             if(address.startsWith("aeron"))
             {
-                return new AeronSendingTransport(getAeronTransportContext(), pipe.getLogicalName(), pipe.getStreamId());
+                scheme = "aeron";
             }
             else if(address.startsWith("amqp"))
             {
-                return new AmqpProtonSendingTransport(getAmqpTransportContext(), pipe.getLogicalName());
+                scheme = "amqp";
             }
             else
             {
                 throw new UnsupportedOperationException("Not yet supporting this type of transport");
+            }
+
+            if(scheme != null)
+            {
+                TransportContext transportContext = transportContextsMap.get(scheme);
+                TransportFactory transportFactory = cachedTransportFactories.get(scheme);
+                if(transportContext != null)
+                {
+                    if(transportFactory != null)
+                    {
+                        sendingTransport = transportFactory.createSendingTransport(transportContext, pipe.getLogicalName(), pipe.getStreamId());
+                    }
+                    else
+                    {
+                        throw new IllegalStateException("Cannot have a valid transportContext with no transportFactory for scheme " + scheme);
+                    }
+                }
+                else
+                {
+                    if(transportFactory != null)
+                    {
+                        transportContext = transportFactory.createTransportContext();
+                        TransportContext existingContext = transportContextsMap.putIfAbsent(scheme, transportContext);
+                        if(existingContext != null)
+                        {
+                            LOGGER.warn("existing transport context should have been null but was {} for scheme {}", existingContext, scheme);
+                            transportContext.close();
+                            transportContext = existingContext;
+                        }
+
+                        sendingTransport = transportFactory.createSendingTransport(transportContext, pipe.getLogicalName(), pipe.getStreamId());
+                    }
+                    else
+                    {
+                        LOGGER.warn("Cannot create sending transport for scheme {} due to no matching transport factory", scheme);
+                    }
+                }
             }
 
         }
@@ -558,23 +699,27 @@ public class MessagingDriver
         {
             throw new UnsupportedOperationException("Not yet supporting this type of message flow");
         }
+        return sendingTransport;
     }
 
     public ReceivingTransport createReceivingTransport(MessageFlow messageFlow, Consumer<Message> messageHandler)
     {
         ReceivingTransport receivingTransport = null;
-
+        String scheme = null;
+        String address = null;
+        int streamId = 0;
         if (messageFlow instanceof Pipe)
         {
             Pipe pipe = (Pipe) messageFlow;
-            String address = messageFlow.getLogicalName();
+            address = messageFlow.getLogicalName();
+            streamId = pipe.getStreamId();
             if(address.startsWith("aeron"))
             {
-                receivingTransport = new AeronReceivingTransport(getAeronTransportContext(), pipe.getLogicalName(), pipe.getStreamId(), messageHandler);
+                scheme = "aeron";
             }
             else if(address.startsWith("amqp"))
             {
-                receivingTransport = new AmqpProtonReceivingTransport(getAmqpTransportContext(), pipe.getLogicalName(), messageHandler);
+                scheme = "amqp";
             }
             else
             {
@@ -585,26 +730,68 @@ public class MessagingDriver
         {
             //TODO(JAF): Determine how to indicate this is a discoverable AMQP receiving transport
             //receivingTransport = new AmqpProtonReceivingTransport(getAmqpTransportContext(), AmqpProtonTransportContext.DEFAULT_AMQP_SUBSCRIPTION_ADDRESS, messageHandler);
+            //scheme = "amqp";
 
-            String defaultSubscriptionChannel = AeronTransportContext.DEFAULT_AERON_SUBSCRIPTION_CHANNEL;
+            scheme = "aeron";
+            //TODO(JAF): This should be a scan instead of defaulting to localhost
+            String defaultSubscriptionChannel = DEFAULT_AERON_SUBSCRIPTION_CHANNEL;
             AeronUri aeronUri = AeronUri.parse(defaultSubscriptionChannel);
-            String channel = defaultSubscriptionChannel;
-            int streamId = 0;
+            address = defaultSubscriptionChannel;
+
             if(aeronUri.get("streamId") != null)
             {
                 streamId = Integer.parseInt(aeronUri.get("streamId"));
             }
             else
             {
-                streamId = AeronTransportContext.globalStreamIdCtr.getAndIncrement();
-                channel = channel + "|streamId=" + streamId;
+                streamId = GLOBAL_STREAM_ID_CTR.getAndIncrement();
+                address = address + "|streamId=" + streamId;
             }
-
-            receivingTransport = new AeronReceivingTransport(getAeronTransportContext(), channel, streamId, messageHandler);
         }
         else
         {
             throw new UnsupportedOperationException("Not yet supporting this type of message flow");
+        }
+
+        if(scheme != null)
+        {
+            TransportContext transportContext = transportContextsMap.get(scheme);
+            TransportFactory transportFactory = cachedTransportFactories.get(scheme);
+            if(transportContext != null)
+            {
+                if(transportFactory != null)
+                {
+                    receivingTransport = transportFactory.createReceivingTransport(transportContext, address, streamId, messageHandler);
+                }
+                else
+                {
+                    throw new IllegalStateException("Cannot have a valid transportContext with no transportFactory for scheme " + scheme);
+                }
+            }
+            else
+            {
+                if(transportFactory != null)
+                {
+                    transportContext = transportFactory.createTransportContext();
+                    TransportContext existingContext = transportContextsMap.putIfAbsent(scheme, transportContext);
+                    if(existingContext != null)
+                    {
+                        LOGGER.warn("existing transport context should have been null but was {} for scheme {}", existingContext, scheme);
+                        transportContext.close();
+                        transportContext = existingContext;
+                    }
+                    else
+                    {
+                        activeReceiverTransportContexts.add(transportContext);
+                    }
+
+                    receivingTransport = transportFactory.createReceivingTransport(transportContext, address, streamId, messageHandler);
+                }
+                else
+                {
+                    LOGGER.warn("Cannot create receiving transport for scheme {} due to no matching transport factory", scheme);
+                }
+            }
         }
         return receivingTransport;
     }

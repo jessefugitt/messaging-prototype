@@ -20,7 +20,7 @@ import org.kaazing.messaging.common.discovery.service.discoverabletransport.dyna
 import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.ClientDeserializer;
 import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.ClientSerializer;
 import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.DiscoveryConfiguration;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.Aeron;

@@ -15,17 +15,13 @@
  */
 package org.kaazing.messaging.client;
 
+import org.kaazing.messaging.common.command.ClientCommand;
 import org.kaazing.messaging.common.destination.MessageFlow;
 import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.transport.ReceivingTransport;
-import org.kaazing.messaging.common.command.MessagingCommand;
-import org.kaazing.messaging.common.transport.TransportContext;
 import org.kaazing.messaging.driver.MessagingDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 public class MessageConsumer
@@ -37,19 +33,22 @@ public class MessageConsumer
     private long messageConsumerId;
     private final Consumer<Message> messageHandler;
 
+    public MessageConsumer(MessageFlow messageFlow, Consumer<Message> messageHandler)
+    {
+        this(MessagingDriver.getInstance(), messageFlow, messageHandler);
+    }
+
     public MessageConsumer(MessagingDriver messagingDriver, MessageFlow messageFlow, Consumer<Message> messageHandler)
     {
         this.messagingDriver = messagingDriver;
         this.messageFlow = messageFlow;
         this.messageHandler = messageHandler;
 
-        MessagingCommand messagingCommand = new MessagingCommand();
-        messagingCommand.setCommandCompletedAction(commandCompletedAction);
-        messagingCommand.setType(MessagingCommand.TYPE_CREATE_CONSUMER);
-        messagingCommand.setMessageFlow(messageFlow);
-        messagingCommand.setMessageHandler(messageHandler);
-
-        messagingDriver.enqueueCommand(messagingCommand);
+        ClientCommand clientCommand = new ClientCommand(ClientCommand.TYPE_CREATE_CONSUMER);
+        clientCommand.setCommandCompletedAction(commandCompletedAction);
+        clientCommand.setMessageFlow(messageFlow);
+        clientCommand.setMessageHandler(messageHandler);
+        messagingDriver.enqueueClientCommand(clientCommand);
     }
 
     public MessageFlow getMessageFlow()
@@ -62,23 +61,22 @@ public class MessageConsumer
      */
     public void close()
     {
-        MessagingCommand messagingCommand = new MessagingCommand();
-        messagingCommand.setType(MessagingCommand.TYPE_DELETE_CONSUMER);
-        messagingCommand.setMessageFlow(messageFlow);
-        messagingDriver.enqueueCommand(messagingCommand);
+        ClientCommand clientCommand = new ClientCommand(ClientCommand.TYPE_DELETE_CONSUMER);
+        clientCommand.setMessageFlow(messageFlow);
+        messagingDriver.enqueueClientCommand(clientCommand);
     }
 
-    private final Consumer<MessagingCommand> commandCompletedAction = new Consumer<MessagingCommand>() {
+    private final Consumer<ClientCommand> commandCompletedAction = new Consumer<ClientCommand>() {
         @Override
-        public void accept(MessagingCommand messagingCommand) {
+        public void accept(ClientCommand clientCommand) {
 
-            if(messagingCommand.getType() == MessagingCommand.TYPE_CREATE_CONSUMER)
+            if(clientCommand.getType() == ClientCommand.TYPE_CREATE_CONSUMER)
             {
-                messageConsumerId = messagingCommand.getMessageConsumerId();
+                messageConsumerId = clientCommand.getMessageConsumerId();
             }
             else
             {
-                LOGGER.warn("Unexpected transport command with type={} in MessageConsumer completed action", messagingCommand.getType());
+                LOGGER.warn("Unexpected transport command with type={} in MessageConsumer completed action", clientCommand.getType());
             }
         }
     };

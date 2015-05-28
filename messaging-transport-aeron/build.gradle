@@ -13,28 +13,16 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport;
+apply plugin: 'java'
 
-import org.kaazing.messaging.common.discovery.Discoverable;
+sourceCompatibility = 1.8
+version = '0.0.1'
 
-public class DiscoverableTransport implements Discoverable {
-    private String key;
-    private TransportHandle transportHandle;
+dependencies {
+    compile project(':messaging-common')
+    compile project(':messaging-driver')
 
-    public DiscoverableTransport(String key, TransportHandle transportHandle)
-    {
-        this.key = key;
-        this.transportHandle = transportHandle;
-    }
-
-    public TransportHandle getTransportHandle()
-    {
-        return transportHandle;
-    }
-
-    @Override
-    public String getKey()
-    {
-        return key;
-    }
+    compile 'uk.co.real-logic:Agrona:0.3.2-SNAPSHOT'
+    compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT'
+    compile 'uk.co.real-logic:aeron-common:0.1-SNAPSHOT'
 }

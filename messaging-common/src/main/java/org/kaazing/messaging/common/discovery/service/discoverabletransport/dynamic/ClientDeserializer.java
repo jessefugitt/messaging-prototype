@@ -15,7 +15,7 @@
  */
 package org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic;
 
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.MutableInteger;
@@ -48,7 +48,7 @@ public class ClientDeserializer
         String physicalAddress = new String(physicalAddressBytes, StandardCharsets.UTF_8);
         String transportHandleId = new String(transportHandleIdBytes, StandardCharsets.UTF_8);
 
-        TransportHandle transportHandle = new TransportHandle(physicalAddress, TransportHandle.Type.Aeron, transportHandleId);
+        TransportHandle transportHandle = new TransportHandle(physicalAddress, "aeron", transportHandleId);
         DiscoverableTransport discoverableTransport = new DiscoverableTransport(logicalName, transportHandle);
 
         return discoverableTransport;

@@ -13,36 +13,29 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.transport;
+package org.kaazing.messaging.common.discovery;
 
-import java.util.Map;
-import java.util.HashMap;
+import org.kaazing.messaging.common.discovery.Discoverable;
+import org.kaazing.messaging.common.transport.TransportHandle;
 
-public class TransportHandle
-{
-    private final String scheme;
-    private final String id;
-    private final String physicalAddress;
+public class DiscoverableTransport implements Discoverable {
+    private String key;
+    private TransportHandle transportHandle;
 
-    public TransportHandle(String physicalAddress, String scheme, String id)
+    public DiscoverableTransport(String key, TransportHandle transportHandle)
     {
-        this.id = id;
-        this.physicalAddress = physicalAddress;
-        this.scheme = scheme;
+        this.key = key;
+        this.transportHandle = transportHandle;
     }
 
-    public String getPhysicalAddress()
+    public TransportHandle getTransportHandle()
     {
-        return physicalAddress;
+        return transportHandle;
     }
 
-    public String getScheme()
+    @Override
+    public String getKey()
     {
-        return scheme;
-    }
-
-    public String getId()
-    {
-        return id;
+        return key;
     }
 }

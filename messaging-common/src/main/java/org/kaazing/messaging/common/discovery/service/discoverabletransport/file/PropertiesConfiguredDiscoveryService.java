@@ -16,7 +16,7 @@
 package org.kaazing.messaging.common.discovery.service.discoverabletransport.file;
 
 import org.kaazing.messaging.common.discovery.service.discoverabletransport.basic.BasicDiscoveryService;
-import org.kaazing.messaging.common.transport.DiscoverableTransport;
+import org.kaazing.messaging.common.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,14 +90,14 @@ public class PropertiesConfiguredDiscoveryService extends BasicDiscoveryService
                         transportHandleStr += "|streamId=0";
                     }
 
-                    transportHandle = new TransportHandle(transportHandleStr, TransportHandle.Type.Aeron, UUID.randomUUID().toString());
+                    transportHandle = new TransportHandle(transportHandleStr, "aeron", UUID.randomUUID().toString());
 
                     DiscoverableTransport discoverableTransport = new DiscoverableTransport(logicalName, transportHandle);
                     registerValue(logicalName, discoverableTransport);
                 }
                 else if(transportHandleStr.startsWith("amqp"))
                 {
-                    transportHandle = new TransportHandle(transportHandleStr, TransportHandle.Type.AMQP, UUID.randomUUID().toString());
+                    transportHandle = new TransportHandle(transportHandleStr, "amqp", UUID.randomUUID().toString());
                     DiscoverableTransport discoverableTransport = new DiscoverableTransport(logicalName, transportHandle);
                     registerValue(logicalName, discoverableTransport);
                 }
