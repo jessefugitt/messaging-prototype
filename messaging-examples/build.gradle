@@ -20,16 +20,21 @@ version = '0.0.1'
 
 dependencies {
     compile project(':messaging-client')
-    compile project(':messaging-client-rx')
-    compile project(':messaging-common')
     compile project(':messaging-driver')
+
+    //Required only for Rx in examples
+    compile project(':messaging-client-rx')
+
+    //Required only for using Discovery in examples
     compile project(':messaging-discovery')
+    //Required only for using Zookeeper Discovery in examples
     compile project(':zookeeper-discovery-service')
 
+    //Pluggable transports
     runtime project(':messaging-transport-aeron')
     runtime project(':messaging-transport-amqp')
 
-    //RxJava
+    //RxJava - required only for using Rx in examples
     compile 'io.reactivex:rxjava:1.0.9'
     compile 'io.reactivex:rxjava-math:1.0.0'
 
