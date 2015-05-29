@@ -22,6 +22,8 @@ import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.driver.MessagingDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.misc.Unsafe;
+import uk.co.real_logic.agrona.UnsafeAccess;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
@@ -34,6 +36,7 @@ import java.util.function.Consumer;
 public class MessageProducer
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(MessageProducer.class);
+    private static final Unsafe UNSAFE = UnsafeAccess.UNSAFE;
 
     private final MessagingDriver messagingDriver;
     private final MessageFlow messageFlow;
@@ -43,6 +46,7 @@ public class MessageProducer
     private long messageProducerId;
     private final IdleStrategy submitIdleStrategy = new BackoffIdleStrategy(
             100, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
+
 
     public MessageProducer(MessageFlow messageFlow)
     {
@@ -108,6 +112,10 @@ public class MessageProducer
                 result = sendQueue.offer(sendDriverMessage);
             }
         }
+        else
+        {
+            UNSAFE.fullFence();
+        }
         return result;
     }
 
@@ -129,6 +137,7 @@ public class MessageProducer
         public void accept(ClientCommand clientCommand) {
             if(clientCommand.getType() == ClientCommand.TYPE_CREATE_PRODUCER)
             {
+                LOGGER.debug("Handling CREATE_PRODUCER command completed");
                 messageProducerIndex = clientCommand.getMessageProducerIndex();
                 messageProducerId = clientCommand.getMessageProducerId();
                 freeQueue = clientCommand.getFreeQueue();
