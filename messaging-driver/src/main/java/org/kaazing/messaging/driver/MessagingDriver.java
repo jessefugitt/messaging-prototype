@@ -63,6 +63,7 @@ public class MessagingDriver
     public static final String DEFAULT_AERON_SUBSCRIPTION_CHANNEL = "aeron:udp?remote=127.0.0.1:40123";
     public static final AtomicInteger GLOBAL_STREAM_ID_CTR = new AtomicInteger(10);
 
+    private final int numThreads;
     private DiscoveryService<DiscoverableTransport> discoveryService;
 
     private final ConcurrentHashMap<String, TransportFactory> cachedTransportFactories = new ConcurrentHashMap<String, TransportFactory>();
@@ -96,6 +97,17 @@ public class MessagingDriver
     private final AtomicBoolean receiveThreadRunning = new AtomicBoolean(true);
     private final IdleStrategy receiveThreadIdleStrategy = new BackoffIdleStrategy(
             100, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
+
+    private final ExecutorService sendReceiveThreadExecutor = Executors.newFixedThreadPool(1);
+    private final AtomicBoolean sendReceiveThreadRunning = new AtomicBoolean(true);
+    private final IdleStrategy sendReceiveThreadIdleStrategy = new BackoffIdleStrategy(
+            100, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
+
+    private final ExecutorService commandSendReceiveThreadExecutor = Executors.newFixedThreadPool(1);
+    private final AtomicBoolean commandSendReceiveThreadRunning = new AtomicBoolean(true);
+    private final IdleStrategy commandSendReceiveThreadIdleStrategy = new BackoffIdleStrategy(
+            100, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
+
 
     private final IdleStrategy deleteIdleStrategy = new BackoffIdleStrategy(
             100, 10, TimeUnit.MICROSECONDS.toNanos(1), TimeUnit.MICROSECONDS.toNanos(100));
@@ -131,6 +143,10 @@ public class MessagingDriver
 
     public MessagingDriver()
     {
+        this(3);
+    }
+    public MessagingDriver(int numEmbeddedThreads)
+    {
         LOGGER.debug("Loading TransportFactory implementations...");
         ServiceLoader<TransportFactory> transportFactoryServiceLoader = ServiceLoader.load(TransportFactory.class);
         Iterator<TransportFactory> iterator = transportFactoryServiceLoader.iterator();
@@ -141,9 +157,29 @@ public class MessagingDriver
             cachedTransportFactories.put(transportFactory.getScheme(), transportFactory);
         }
 
-        executor.execute(() -> runCommandThread());
-        sendThreadExecutor.execute(() -> runSendThread());
-        receiveThreadExecutor.execute(() -> runReceiveThread());
+        this.numThreads = numEmbeddedThreads;
+        if(numEmbeddedThreads >= 3) {
+            executor.execute(() -> runCommandThread());
+            sendThreadExecutor.execute(() -> runSendThread());
+            receiveThreadExecutor.execute(() -> runReceiveThread());
+        }
+        else if(numEmbeddedThreads == 2)
+        {
+            executor.execute(() -> runCommandThread());
+            sendReceiveThreadExecutor.execute(() -> runSendReceiveThread());
+        }
+        else if(numEmbeddedThreads == 1)
+        {
+            commandSendReceiveThreadExecutor.execute(() -> runCommandSendReceiveThread());
+        }
+        else if(numEmbeddedThreads == 0)
+        {
+            LOGGER.debug("Running 0 embedded threads; media driver work must be explicitly executed");
+        }
+        else
+        {
+            throw new IllegalArgumentException("Invalid number of threads to use: " + numEmbeddedThreads);
+        }
     }
 
     public boolean enqueueClientCommand(ClientCommand command)
@@ -463,15 +499,23 @@ public class MessagingDriver
         return 0;
     }
 
+
+    public int doCommandWork()
+    {
+        int workDone = 0;
+        workDone += clientCommandQueue.drain(clientCommandConsumer);
+        workDone += driverCommandQueue.drain(driverCommandConsumer);
+        workDone += doWork();
+        return workDone;
+    }
+
     protected void runCommandThread()
     {
         try
         {
             while (running.get())
             {
-                clientCommandQueue.drain(clientCommandConsumer);
-                driverCommandQueue.drain(driverCommandConsumer);
-                int workDone = doWork();
+                int workDone = doCommandWork();
                 idleStrategy.idle(workDone);
             }
         }
@@ -481,37 +525,51 @@ public class MessagingDriver
         }
     }
 
+    public int doSendWork()
+    {
+        int workDone = producerSendQueues.doAction(0, (producerSendQueue) ->
+        {
+            int perProducerWorkDone = 0;
+            int i = 0;
+            DriverMessage queuedDriverMessage = producerSendQueue.peek();
+            while(queuedDriverMessage != null && i < PER_PRODUCER_SEND_COUNT_LIMIT)
+            {
+                MessageProducerMapping producerMapping = messageProducerMappings[queuedDriverMessage.getMessageProducerIndex()];
+                if(producerMapping != null)
+                {
+                    boolean result = producerMapping.getSendingTransports().doActionWithArgToBoolean(0,
+                            (sendingTransport, message) -> sendingTransport.offer(message),
+                            queuedDriverMessage);
+
+                    //TODO(JAF): Determine what to do with errors on some of the transports but not all (resend on those transports?)
+                    perProducerWorkDone++;
+                    DriverMessage dequeuedDriverMessage = producerSendQueue.poll();
+                    producerMapping.getFreeQueue().offer(dequeuedDriverMessage);
+                }
+                i++;
+                queuedDriverMessage = producerSendQueue.peek();
+            }
+            return perProducerWorkDone;
+        });
+
+        return workDone;
+    }
+
     protected void runSendThread()
     {
         while (sendThreadRunning.get())
         {
-            int workDone = producerSendQueues.doAction(0, (producerSendQueue) ->
-            {
-                int perProducerWorkDone = 0;
-                int i = 0;
-                DriverMessage queuedDriverMessage = producerSendQueue.peek();
-                while(queuedDriverMessage != null && i < PER_PRODUCER_SEND_COUNT_LIMIT)
-                {
-                    MessageProducerMapping producerMapping = messageProducerMappings[queuedDriverMessage.getMessageProducerIndex()];
-                    if(producerMapping != null)
-                    {
-                        boolean result = producerMapping.getSendingTransports().doActionWithArgToBoolean(0,
-                                (sendingTransport, message) -> sendingTransport.offer(message),
-                                queuedDriverMessage);
-
-                        //TODO(JAF): Determine what to do with errors on some of the transports but not all (resend on those transports?)
-                        perProducerWorkDone++;
-                        DriverMessage dequeuedDriverMessage = producerSendQueue.poll();
-                        producerMapping.getFreeQueue().offer(dequeuedDriverMessage);
-                    }
-                    i++;
-                    queuedDriverMessage = producerSendQueue.peek();
-                }
-                return perProducerWorkDone;
-            });
-
+            int workDone = doSendWork();
             sendThreadIdleStrategy.idle(workDone);
         }
+    }
+
+    public int doReceiveWork()
+    {
+        int workDone = activeTransportContexts.doActionWithArg(0,
+                (transportContext, receivingTransports) -> transportContext.doReceiveWork(receivingTransports),
+                getPollableReceivingTransports());
+        return workDone;
     }
 
     protected void runReceiveThread()
@@ -521,17 +579,48 @@ public class MessagingDriver
             while (receiveThreadRunning.get())
             {
 
-                int workDone = 0;
-                workDone = activeTransportContexts.doActionWithArg(0,
-                        (transportContext, receivingTransports) -> transportContext.doReceiveWork(receivingTransports),
-                        getPollableReceivingTransports());
-
+                int workDone = doReceiveWork();
                 receiveThreadIdleStrategy.idle(workDone);
             }
         }
         catch (final Exception ex)
         {
             LOGGER.error("Error running receive thread", ex);
+        }
+    }
+
+    protected void runSendReceiveThread()
+    {
+        try
+        {
+            while (sendReceiveThreadRunning.get())
+            {
+                int workDone = doReceiveWork();
+                workDone += doSendWork();
+                sendReceiveThreadIdleStrategy.idle(workDone);
+            }
+        }
+        catch (final Exception ex)
+        {
+            LOGGER.error("Error running send receive thread", ex);
+        }
+    }
+
+    protected void runCommandSendReceiveThread()
+    {
+        try
+        {
+            while (commandSendReceiveThreadRunning.get())
+            {
+                int workDone = doReceiveWork();
+                workDone += doSendWork();
+                workDone += doCommandWork();
+                commandSendReceiveThreadIdleStrategy.idle(workDone);
+            }
+        }
+        catch (final Exception ex)
+        {
+            LOGGER.error("Error running command send receive thread", ex);
         }
     }
 
@@ -595,17 +684,43 @@ public class MessagingDriver
         sendThreadRunning.set(false);
         receiveThreadRunning.set(false);
 
-        executor.shutdown();
-        sendThreadExecutor.shutdown();
-        receiveThreadExecutor.shutdown();
+        if(numThreads >= 3)
+        {
+            executor.shutdown();
+            sendThreadExecutor.shutdown();
+            receiveThreadExecutor.shutdown();
+        }
+        else if(numThreads == 2)
+        {
+            executor.shutdown();
+            sendReceiveThreadExecutor.shutdown();
+        }
+        else if(numThreads == 1)
+        {
+            commandSendReceiveThreadExecutor.shutdown();
+        }
+
         try
         {
-            executor.awaitTermination(10000, TimeUnit.MILLISECONDS);
-            sendThreadExecutor.awaitTermination(10000, TimeUnit.MILLISECONDS);
-            receiveThreadExecutor.awaitTermination(10000, TimeUnit.MILLISECONDS);
-        } catch (InterruptedException e)
+            if(numThreads >= 3)
+            {
+                executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+                sendThreadExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+                receiveThreadExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+            }
+            else if(numThreads == 2)
+            {
+                executor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+                sendReceiveThreadExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+            }
+            else if(numThreads == 1)
+            {
+                commandSendReceiveThreadExecutor.awaitTermination(1000, TimeUnit.MILLISECONDS);
+            }
+        }
+        catch (InterruptedException e)
         {
-            e.printStackTrace();
+            LOGGER.debug("Interrupted while awaiting termination", e);
         }
 
         transportContextsMap.clear();
