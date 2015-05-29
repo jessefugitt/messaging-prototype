@@ -13,12 +13,11 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery.service;
+package org.kaazing.messaging.discovery.service;
 
-import org.kaazing.messaging.common.discovery.DiscoveryEvent;
+import org.kaazing.messaging.discovery.DiscoveryEvent;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 public interface DiscoveryService<T>

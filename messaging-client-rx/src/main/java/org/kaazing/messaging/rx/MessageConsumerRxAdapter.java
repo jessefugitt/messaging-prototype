@@ -15,7 +15,7 @@
  */
 package org.kaazing.messaging.rx;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.client.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
 import org.kaazing.messaging.common.destination.MessageFlow;
 import org.kaazing.messaging.common.collections.AtomicArrayWithArg;

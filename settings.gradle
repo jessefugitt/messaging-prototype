@@ -1,1 +1,1 @@
-include 'messaging-common', 'messaging-client', 'messaging-client-rx', 'messaging-driver', 'messaging-examples', 'messaging-transport-aeron', 'messaging-transport-amqp', 'discovery-daemon', 'zookeeper-discovery-service'
+include 'messaging-common', 'messaging-client', 'messaging-client-rx', 'messaging-discovery', 'messaging-driver', 'messaging-examples', 'messaging-transport-aeron', 'messaging-transport-amqp', 'discovery-daemon', 'zookeeper-discovery-service'

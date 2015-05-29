@@ -13,15 +13,11 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-apply plugin: 'java'
+package org.kaazing.messaging.discovery.service.discoverabletransport.dynamic;
 
-sourceCompatibility = 1.8
-version = '0.0.1'
-
-dependencies {
-    compile project(':messaging-common')
-    compile project(':messaging-driver')
-
-    //AMQP Proton
-    compile 'org.apache.qpid:proton-j:0.9.1'
+public class DiscoveryConfiguration
+{
+    public static final boolean EMBEDDED_MEDIA_DRIVER = false;
+    public static final int FRAGMENT_COUNT_LIMIT = 40;
+    public static final int STREAM_ID = 10;
 }

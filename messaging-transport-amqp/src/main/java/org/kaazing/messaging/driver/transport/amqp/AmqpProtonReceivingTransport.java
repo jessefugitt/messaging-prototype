@@ -15,14 +15,15 @@
  */
 package org.kaazing.messaging.driver.transport.amqp;
 
-import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.driver.message.DriverMessage;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.AmqpValue;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.amqp.messaging.Section;
+import org.kaazing.messaging.driver.transport.TransportContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,12 +38,12 @@ public class AmqpProtonReceivingTransport implements ReceivingTransport, Consume
     private final int defaultBufferSize = 4096;
     private final String address;
     private final AmqpProtonTransportContext amqpProtonTransportContext;
-    private final Consumer<Message> messageHandler;
+    private final Consumer<DriverMessage> messageHandler;
     private final TransportHandle handle;
     private DiscoverableTransport discoverableTransport;
-    private final ThreadLocal<Message> tlMessage = new ThreadLocal<Message>().withInitial(() -> new Message(defaultBufferSize));
+    private final ThreadLocal<DriverMessage> tlMessage = new ThreadLocal<DriverMessage>().withInitial(() -> new DriverMessage(defaultBufferSize));
 
-    public AmqpProtonReceivingTransport(AmqpProtonTransportContext amqpProtonTransportContext, String address, Consumer<Message> messageHandler)
+    public AmqpProtonReceivingTransport(AmqpProtonTransportContext amqpProtonTransportContext, String address, Consumer<DriverMessage> messageHandler)
     {
         this.amqpProtonTransportContext = amqpProtonTransportContext;
         this.address = address;
@@ -51,6 +52,12 @@ public class AmqpProtonReceivingTransport implements ReceivingTransport, Consume
         amqpProtonTransportContext.addSubscription(address, this);
         this.messageHandler = messageHandler;
         this.handle = new TransportHandle(address, "amqp", UUID.randomUUID().toString());
+    }
+
+    @Override
+    public TransportContext getTransportContext()
+    {
+        return amqpProtonTransportContext;
     }
 
     @Override
@@ -88,23 +95,25 @@ public class AmqpProtonReceivingTransport implements ReceivingTransport, Consume
             byte[] bytes = binaryData.getArray();
             int offset = binaryData.getArrayOffset();
             int length = binaryData.getLength();
-            Message message = tlMessage.get();
-            message.getUnsafeBuffer().putBytes(0, bytes, offset, length);
+            DriverMessage driverMessage = tlMessage.get();
+            driverMessage.getUnsafeBuffer().putBytes(0, bytes, offset, length);
+            driverMessage.setBufferOffset(0);
+            driverMessage.setBufferLength(length);
             //TODO(JAF): Map header information into message metadata
-            messageHandler.accept(message);
+            messageHandler.accept(driverMessage);
         }
         else if(section instanceof AmqpValue)
         {
             Object amqpValueObject = ((AmqpValue) section).getValue();
             String amqpValueString = amqpValueObject.toString();
-            Message message = tlMessage.get();
+            DriverMessage driverMessage = tlMessage.get();
 
             //TODO(JAF): Handle growing the internal buffer
-            message.getUnsafeBuffer().putBytes(0, amqpValueString.getBytes(StandardCharsets.UTF_8));
+            driverMessage.getUnsafeBuffer().putBytes(0, amqpValueString.getBytes(StandardCharsets.UTF_8));
 
             //TODO(JAF): Map header information into message metadata
 
-            messageHandler.accept(message);
+            messageHandler.accept(driverMessage);
         }
         else
         {

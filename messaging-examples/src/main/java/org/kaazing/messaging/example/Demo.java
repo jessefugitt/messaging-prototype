@@ -15,10 +15,10 @@
  */
 package org.kaazing.messaging.example;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.client.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
 import org.kaazing.messaging.client.MessageProducer;
-import org.kaazing.messaging.common.destination.Topic;
+import org.kaazing.messaging.client.destination.Topic;
 import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.util.function.Consumer;
@@ -52,6 +52,13 @@ public class Demo
         message.setBufferLength(4);
 
         messageProducer.offer(message);
+
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        driver.close();
         //messageProducer.submit(message);
     }
 }

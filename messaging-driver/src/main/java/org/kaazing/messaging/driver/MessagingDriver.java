@@ -16,13 +16,12 @@
 package org.kaazing.messaging.driver;
 
 import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
-import org.kaazing.messaging.common.command.ClientCommand;
-import org.kaazing.messaging.common.destination.Pipe;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
-import org.kaazing.messaging.common.discovery.DiscoveryEvent;
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.command.ClientCommand;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.DiscoveryEvent;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.discovery.service.DiscoveryService;
+import org.kaazing.messaging.discovery.service.DiscoveryService;
 import org.kaazing.messaging.common.transport.*;
 import org.kaazing.messaging.driver.mapping.MessageConsumerMapping;
 import org.kaazing.messaging.driver.mapping.MessageProducerMapping;
@@ -68,14 +67,14 @@ public class MessagingDriver
 
     private final ConcurrentHashMap<String, TransportFactory> cachedTransportFactories = new ConcurrentHashMap<String, TransportFactory>();
 
-    private final AtomicArrayWithArg<TransportContext, AtomicArray<ReceivingTransport>> activeReceiverTransportContexts = new AtomicArrayWithArg<>();
+    private final AtomicArrayWithArg<TransportContext, AtomicArray<ReceivingTransport>> activeTransportContexts = new AtomicArrayWithArg<>();
     private final ConcurrentHashMap<String, TransportContext> transportContextsMap = new ConcurrentHashMap<>();
     //Single writer with lock free readers
     private final AtomicArray<ReceivingTransport> pollableReceivingTransports = new AtomicArray<ReceivingTransport>();
 
     private final MessageProducerMapping[] messageProducerMappings = new MessageProducerMapping[MESSAGE_PRODUCER_DEFAULT_CAPACITY];
     private Long2ObjectHashMap<AtomicArray<MessageProducerMapping>> logicalNameToProducerMap = new Long2ObjectHashMap<>();
-    private final AtomicArray<OneToOneConcurrentArrayQueue<Message>> producerSendQueues = new AtomicArray<>();
+    private final AtomicArray<OneToOneConcurrentArrayQueue<DriverMessage>> producerSendQueues = new AtomicArray<>();
 
     private final MessageConsumerMapping[] messageConsumerMappings = new MessageConsumerMapping[MESSAGE_CONSUMER_DEFAULT_CAPACITY];
 
@@ -193,7 +192,7 @@ public class MessagingDriver
         final MessageProducerMapping producerMapping = new MessageProducerMapping(messageFlow, index);
         messageProducerMappings[index] = producerMapping;
         producerSendQueues.add(producerMapping.getSendQueue());
-        long hash = producerMapping.getMessageFlow().getLogicalName().hashCode();
+        long hash = producerMapping.getMessageFlow().getName().hashCode();
         AtomicArray<MessageProducerMapping> hashMatches = logicalNameToProducerMap.computeIfAbsent(hash, (ignore) -> new AtomicArray<MessageProducerMapping>());
         hashMatches.add(producerMapping);
 
@@ -271,10 +270,10 @@ public class MessagingDriver
         {
             if (discoveryService != null)
             {
-                discoveryService.addDiscoveryEventListener(messageFlow.getLogicalName(), discoveredTransportsAction);
+                discoveryService.addDiscoveryEventListener(messageFlow.getName(), discoveredTransportsAction);
 
                 //Deliver any initial matching values
-                AtomicArray<DiscoverableTransport> matchingValues = discoveryService.getValues(messageFlow.getLogicalName());
+                AtomicArray<DiscoverableTransport> matchingValues = discoveryService.getValues(messageFlow.getName());
                 if(matchingValues != null) {
                     final DiscoveryEvent<DiscoverableTransport> discoveryEvent = new DiscoveryEvent<>();
                     matchingValues.forEach((discoverableTransport) -> discoveryEvent.getAdded().add(discoverableTransport));
@@ -303,10 +302,10 @@ public class MessagingDriver
         {
             if(discoveryService != null && producerMapping.getDiscoveredTransportsAction() != null)
             {
-                discoveryService.removeDiscoveryEventListener(producerMapping.getMessageFlow().getLogicalName(), producerMapping.getDiscoveredTransportsAction());
+                discoveryService.removeDiscoveryEventListener(producerMapping.getMessageFlow().getName(), producerMapping.getDiscoveredTransportsAction());
             }
 
-            long hash = producerMapping.getMessageFlow().getLogicalName().hashCode();
+            long hash = producerMapping.getMessageFlow().getName().hashCode();
             AtomicArray<MessageProducerMapping> hashMatches = logicalNameToProducerMap.get(hash);
             hashMatches.remove(producerMapping);
 
@@ -335,14 +334,14 @@ public class MessagingDriver
         }
     }
 
-    private MessageConsumerMapping createMessageConsumer(MessageFlow messageFlow, Consumer<Message> messageHandler, int index)
+    private MessageConsumerMapping createMessageConsumer(MessageFlow messageFlow, Consumer<DriverMessage> messageHandler, int index)
     {
         MessageConsumerMapping consumerMapping = new MessageConsumerMapping(messageFlow);
         messageConsumerMappings[index] = consumerMapping;
         ReceivingTransport receivingTransport = createReceivingTransport(messageFlow, messageHandler);
         if(discoveryService != null)
         {
-            DiscoverableTransport discoverableTransport = new DiscoverableTransport(messageFlow.getLogicalName(), receivingTransport.getHandle());
+            DiscoverableTransport discoverableTransport = new DiscoverableTransport(messageFlow.getName(), receivingTransport.getHandle());
             receivingTransport.setDiscoverableTransport(discoverableTransport);
             discoveryService.registerValue(discoverableTransport.getKey(), discoverableTransport);
         }
@@ -490,23 +489,23 @@ public class MessagingDriver
             {
                 int perProducerWorkDone = 0;
                 int i = 0;
-                Message queuedMessage = producerSendQueue.peek();
-                while(queuedMessage != null && i < PER_PRODUCER_SEND_COUNT_LIMIT)
+                DriverMessage queuedDriverMessage = producerSendQueue.peek();
+                while(queuedDriverMessage != null && i < PER_PRODUCER_SEND_COUNT_LIMIT)
                 {
-                    MessageProducerMapping producerMapping = messageProducerMappings[queuedMessage.getMessageProducerIndex()];
+                    MessageProducerMapping producerMapping = messageProducerMappings[queuedDriverMessage.getMessageProducerIndex()];
                     if(producerMapping != null)
                     {
                         boolean result = producerMapping.getSendingTransports().doActionWithArgToBoolean(0,
                                 (sendingTransport, message) -> sendingTransport.offer(message),
-                                queuedMessage);
+                                queuedDriverMessage);
 
                         //TODO(JAF): Determine what to do with errors on some of the transports but not all (resend on those transports?)
                         perProducerWorkDone++;
-                        Message dequeuedMessage = producerSendQueue.poll();
-                        producerMapping.getFreeQueue().offer(dequeuedMessage);
+                        DriverMessage dequeuedDriverMessage = producerSendQueue.poll();
+                        producerMapping.getFreeQueue().offer(dequeuedDriverMessage);
                     }
                     i++;
-                    queuedMessage = producerSendQueue.peek();
+                    queuedDriverMessage = producerSendQueue.peek();
                 }
                 return perProducerWorkDone;
             });
@@ -523,7 +522,7 @@ public class MessagingDriver
             {
 
                 int workDone = 0;
-                workDone = activeReceiverTransportContexts.doActionWithArg(0,
+                workDone = activeTransportContexts.doActionWithArg(0,
                         (transportContext, receivingTransports) -> transportContext.doReceiveWork(receivingTransports),
                         getPollableReceivingTransports());
 
@@ -539,30 +538,8 @@ public class MessagingDriver
     public SendingTransport createSendingTransportFromHandle(TransportHandle transportHandle)
     {
         SendingTransport sendingTransport = null;
-        String scheme = null;
-        String address = null;
-        int streamId = 0;
-        if(transportHandle.getScheme().equalsIgnoreCase("aeron"))
-        {
-            address = transportHandle.getPhysicalAddress();
-            AeronUri aeronUri = AeronUri.parse(address);
-            if(aeronUri.get("streamId") != null)
-            {
-                streamId = Integer.parseInt(aeronUri.get("streamId"));
-            }
-            scheme = "aeron";
-
-
-        }
-        else if(transportHandle.getScheme().equalsIgnoreCase("amqp"))
-        {
-            address = transportHandle.getPhysicalAddress();
-            scheme = "amqp";
-        }
-        else
-        {
-            throw new UnsupportedOperationException("Not yet supporting this type of transport");
-        }
+        String scheme = transportHandle.getScheme();
+        String address = transportHandle.getPhysicalAddress();
 
         if(scheme != null)
         {
@@ -572,7 +549,7 @@ public class MessagingDriver
             {
                 if(transportFactory != null)
                 {
-                    sendingTransport = transportFactory.createSendingTransport(transportContext, address, streamId, transportHandle.getId());
+                    sendingTransport = transportFactory.createSendingTransport(transportContext, address, transportHandle.getId());
                 }
                 else
                 {
@@ -591,8 +568,12 @@ public class MessagingDriver
                         transportContext.close();
                         transportContext = existingContext;
                     }
+                    else
+                    {
+                        activeTransportContexts.add(transportContext);
+                    }
 
-                    sendingTransport = transportFactory.createSendingTransport(transportContext, address, streamId, transportHandle.getId());
+                    sendingTransport = transportFactory.createSendingTransport(transportContext, address, transportHandle.getId());
                 }
                 else
                 {
@@ -629,33 +610,22 @@ public class MessagingDriver
 
         transportContextsMap.clear();
 
-        activeReceiverTransportContexts.forEach(transportContext -> {
+        activeTransportContexts.forEach(transportContext -> {
             transportContext.close();
         });
-        activeReceiverTransportContexts.clear();
+        activeTransportContexts.clear();
     }
 
     public SendingTransport createSendingTransport(MessageFlow messageFlow)
     {
         SendingTransport sendingTransport = null;
-        if (messageFlow instanceof Pipe)
+        if (!messageFlow.requiresDiscovery())
         {
-            Pipe pipe = (Pipe) messageFlow;
-            String address = pipe.getLogicalName();
+
+            String address = messageFlow.getName();
+
             //TODO(JAF): Replace with proper scheme parsing
-            String scheme = null;
-            if(address.startsWith("aeron"))
-            {
-                scheme = "aeron";
-            }
-            else if(address.startsWith("amqp"))
-            {
-                scheme = "amqp";
-            }
-            else
-            {
-                throw new UnsupportedOperationException("Not yet supporting this type of transport");
-            }
+            String scheme = address.split(":")[0];
 
             if(scheme != null)
             {
@@ -665,7 +635,7 @@ public class MessagingDriver
                 {
                     if(transportFactory != null)
                     {
-                        sendingTransport = transportFactory.createSendingTransport(transportContext, pipe.getLogicalName(), pipe.getStreamId());
+                        sendingTransport = transportFactory.createSendingTransport(transportContext, address);
                     }
                     else
                     {
@@ -684,8 +654,12 @@ public class MessagingDriver
                             transportContext.close();
                             transportContext = existingContext;
                         }
+                        else
+                        {
+                            activeTransportContexts.add(transportContext);
+                        }
 
-                        sendingTransport = transportFactory.createSendingTransport(transportContext, pipe.getLogicalName(), pipe.getStreamId());
+                        sendingTransport = transportFactory.createSendingTransport(transportContext, address);
                     }
                     else
                     {
@@ -702,31 +676,17 @@ public class MessagingDriver
         return sendingTransport;
     }
 
-    public ReceivingTransport createReceivingTransport(MessageFlow messageFlow, Consumer<Message> messageHandler)
+    public ReceivingTransport createReceivingTransport(MessageFlow messageFlow, Consumer<DriverMessage> messageHandler)
     {
         ReceivingTransport receivingTransport = null;
         String scheme = null;
         String address = null;
-        int streamId = 0;
-        if (messageFlow instanceof Pipe)
+        if (!messageFlow.requiresDiscovery())
         {
-            Pipe pipe = (Pipe) messageFlow;
-            address = messageFlow.getLogicalName();
-            streamId = pipe.getStreamId();
-            if(address.startsWith("aeron"))
-            {
-                scheme = "aeron";
-            }
-            else if(address.startsWith("amqp"))
-            {
-                scheme = "amqp";
-            }
-            else
-            {
-                throw new UnsupportedOperationException("Not yet supporting this type of transport");
-            }
+            address = messageFlow.getName();
+            scheme = address.split(":")[0];
         }
-        else if(messageFlow.requiresDiscovery())
+        else
         {
             //TODO(JAF): Determine how to indicate this is a discoverable AMQP receiving transport
             //receivingTransport = new AmqpProtonReceivingTransport(getAmqpTransportContext(), AmqpProtonTransportContext.DEFAULT_AMQP_SUBSCRIPTION_ADDRESS, messageHandler);
@@ -738,6 +698,7 @@ public class MessagingDriver
             AeronUri aeronUri = AeronUri.parse(defaultSubscriptionChannel);
             address = defaultSubscriptionChannel;
 
+            int streamId = 0;
             if(aeronUri.get("streamId") != null)
             {
                 streamId = Integer.parseInt(aeronUri.get("streamId"));
@@ -748,10 +709,6 @@ public class MessagingDriver
                 address = address + "|streamId=" + streamId;
             }
         }
-        else
-        {
-            throw new UnsupportedOperationException("Not yet supporting this type of message flow");
-        }
 
         if(scheme != null)
         {
@@ -761,7 +718,7 @@ public class MessagingDriver
             {
                 if(transportFactory != null)
                 {
-                    receivingTransport = transportFactory.createReceivingTransport(transportContext, address, streamId, messageHandler);
+                    receivingTransport = transportFactory.createReceivingTransport(transportContext, address, messageHandler);
                 }
                 else
                 {
@@ -782,10 +739,10 @@ public class MessagingDriver
                     }
                     else
                     {
-                        activeReceiverTransportContexts.add(transportContext);
+                        activeTransportContexts.add(transportContext);
                     }
 
-                    receivingTransport = transportFactory.createReceivingTransport(transportContext, address, streamId, messageHandler);
+                    receivingTransport = transportFactory.createReceivingTransport(transportContext, address, messageHandler);
                 }
                 else
                 {

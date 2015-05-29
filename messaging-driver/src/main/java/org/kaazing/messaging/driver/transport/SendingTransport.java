@@ -15,22 +15,24 @@
  */
 package org.kaazing.messaging.driver.transport;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 
 public interface SendingTransport
 {
+    public TransportContext getTransportContext();
+
     /**
      * Blocking call to submit a message
-     * @param message
+     * @param driverMessage
      */
-    public void submit(Message message);
+    public void submit(DriverMessage driverMessage);
 
     /**
      * Non-blocking call to submit a message
-     * @param message
+     * @param driverMessage
      * @return true if successful or false otherwise
      */
-    public long offer(Message message);
+    public long offer(DriverMessage driverMessage);
 
     public String getTargetTransportHandleId();
 

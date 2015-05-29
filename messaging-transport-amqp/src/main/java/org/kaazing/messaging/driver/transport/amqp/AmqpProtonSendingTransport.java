@@ -15,11 +15,12 @@
  */
 package org.kaazing.messaging.driver.transport.amqp;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.driver.transport.SendingTransport;
 import org.apache.qpid.proton.amqp.Binary;
 import org.apache.qpid.proton.amqp.messaging.Data;
 import org.apache.qpid.proton.message.impl.MessageImpl;
+import org.kaazing.messaging.driver.transport.TransportContext;
 
 public class AmqpProtonSendingTransport implements SendingTransport
 {
@@ -42,14 +43,20 @@ public class AmqpProtonSendingTransport implements SendingTransport
     }
 
     @Override
-    public void submit(Message message)
+    public TransportContext getTransportContext()
+    {
+        return amqpTransportContext;
+    }
+
+    @Override
+    public void submit(DriverMessage driverMessage)
     {
         org.apache.qpid.proton.message.Message amqpMessage = tlAmqpMessage.get();
         amqpMessage.setAddress(address);
 
-        message.getBuffer();
-        byte[] bytesToSend = new byte[message.getBufferLength()];
-        message.getBuffer().getBytes(message.getBufferOffset(), bytesToSend);
+        driverMessage.getBuffer();
+        byte[] bytesToSend = new byte[driverMessage.getBufferLength()];
+        driverMessage.getBuffer().getBytes(driverMessage.getBufferOffset(), bytesToSend);
         Binary binary = new Binary(bytesToSend);
         amqpMessage.setBody(new Data(binary));
 
@@ -60,9 +67,9 @@ public class AmqpProtonSendingTransport implements SendingTransport
     }
 
     @Override
-    public long offer(Message message)
+    public long offer(DriverMessage driverMessage)
     {
-        submit(message);
+        submit(driverMessage);
         //TODO(JAF): Support offer method with AMQP
         //throw new UnsupportedOperationException("non-blocking submit method is not supported with this transport");
         return 0;

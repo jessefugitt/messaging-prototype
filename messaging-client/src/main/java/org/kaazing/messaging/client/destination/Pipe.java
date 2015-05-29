@@ -13,29 +13,14 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery;
+package org.kaazing.messaging.client.destination;
 
-import org.kaazing.messaging.common.discovery.Discoverable;
-import org.kaazing.messaging.common.transport.TransportHandle;
+import org.kaazing.messaging.common.destination.MessageFlow;
 
-public class DiscoverableTransport implements Discoverable {
-    private String key;
-    private TransportHandle transportHandle;
-
-    public DiscoverableTransport(String key, TransportHandle transportHandle)
+public class Pipe extends MessageFlow
+{
+    public Pipe(String address)
     {
-        this.key = key;
-        this.transportHandle = transportHandle;
-    }
-
-    public TransportHandle getTransportHandle()
-    {
-        return transportHandle;
-    }
-
-    @Override
-    public String getKey()
-    {
-        return key;
+        super(address);
     }
 }

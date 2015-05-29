@@ -13,9 +13,9 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic;
+package org.kaazing.messaging.discovery.service.discoverabletransport.dynamic;
 
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import uk.co.real_logic.agrona.collections.MutableInteger;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 

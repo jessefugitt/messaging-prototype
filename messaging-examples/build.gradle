@@ -23,6 +23,7 @@ dependencies {
     compile project(':messaging-client-rx')
     compile project(':messaging-common')
     compile project(':messaging-driver')
+    compile project(':messaging-discovery')
     compile project(':zookeeper-discovery-service')
 
     runtime project(':messaging-transport-aeron')

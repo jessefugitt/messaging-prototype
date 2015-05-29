@@ -13,8 +13,20 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery;
+package org.kaazing.messaging.client.destination;
 
-public interface Discoverable {
-    public String getKey();
+import org.kaazing.messaging.common.destination.MessageFlow;
+
+public class Topic extends MessageFlow
+{
+    public Topic(String logicalName)
+    {
+        super(logicalName);
+    }
+
+    @Override
+    public boolean requiresDiscovery()
+    {
+        return true;
+    }
 }

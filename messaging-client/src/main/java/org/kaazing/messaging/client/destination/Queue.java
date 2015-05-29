@@ -13,7 +13,9 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.destination;
+package org.kaazing.messaging.client.destination;
+
+import org.kaazing.messaging.common.destination.MessageFlow;
 
 public class Queue extends MessageFlow
 {

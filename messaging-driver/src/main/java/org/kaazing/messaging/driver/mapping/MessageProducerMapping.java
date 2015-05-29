@@ -1,10 +1,10 @@
 package org.kaazing.messaging.driver.mapping;
 
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.discovery.DiscoveryEvent;
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.discovery.DiscoveryEvent;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.kaazing.messaging.driver.transport.SendingTransport;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 
@@ -17,11 +17,11 @@ public class MessageProducerMapping
     private final long id = ThreadLocalRandom.current().nextLong();
     private final MessageFlow messageFlow;
     private final int index;
-    private final AtomicArrayWithArg<SendingTransport, Message> sendingTransports = new AtomicArrayWithArg<>();
-    private final OneToOneConcurrentArrayQueue<Message> sendQueue = new OneToOneConcurrentArrayQueue<>(PRODUCER_COMMAND_QUEUE_DEFAULT_CAPACITY);
+    private final AtomicArrayWithArg<SendingTransport, DriverMessage> sendingTransports = new AtomicArrayWithArg<>();
+    private final OneToOneConcurrentArrayQueue<DriverMessage> sendQueue = new OneToOneConcurrentArrayQueue<>(PRODUCER_COMMAND_QUEUE_DEFAULT_CAPACITY);
 
     //TODO(JAF): May need to switch to another data structure if multiple threads are being used to access the free list or offer to it
-    private final OneToOneConcurrentArrayQueue<Message> freeQueue = new OneToOneConcurrentArrayQueue<>(PRODUCER_COMMAND_QUEUE_DEFAULT_CAPACITY);
+    private final OneToOneConcurrentArrayQueue<DriverMessage> freeQueue = new OneToOneConcurrentArrayQueue<>(PRODUCER_COMMAND_QUEUE_DEFAULT_CAPACITY);
 
     private Consumer<DiscoveryEvent<DiscoverableTransport>> discoveredTransportsAction;
 
@@ -31,7 +31,7 @@ public class MessageProducerMapping
         this.index = index;
         for(int i = 0; i < PRODUCER_COMMAND_QUEUE_DEFAULT_CAPACITY; i++)
         {
-            freeQueue.offer(new Message(Message.DEFAULT_BUFFER_SIZE));
+            freeQueue.offer(new DriverMessage(DriverMessage.DEFAULT_BUFFER_SIZE));
         }
     }
 
@@ -45,17 +45,17 @@ public class MessageProducerMapping
         return messageFlow;
     }
 
-    public AtomicArrayWithArg<SendingTransport, Message> getSendingTransports()
+    public AtomicArrayWithArg<SendingTransport, DriverMessage> getSendingTransports()
     {
         return sendingTransports;
     }
 
-    public OneToOneConcurrentArrayQueue<Message> getSendQueue()
+    public OneToOneConcurrentArrayQueue<DriverMessage> getSendQueue()
     {
         return sendQueue;
     }
 
-    public OneToOneConcurrentArrayQueue<Message> getFreeQueue()
+    public OneToOneConcurrentArrayQueue<DriverMessage> getFreeQueue()
     {
         return freeQueue;
     }

@@ -15,12 +15,12 @@
  */
 package org.kaazing.discovery.messaging.daemon;
 
-import org.kaazing.messaging.common.discovery.Discoverable;
-import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.Client;
-import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.ClientDeserializer;
-import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.ClientSerializer;
-import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.DiscoveryConfiguration;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.Discoverable;
+import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.Client;
+import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.ClientDeserializer;
+import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.ClientSerializer;
+import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.DiscoveryConfiguration;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.Aeron;

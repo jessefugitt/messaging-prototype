@@ -15,9 +15,9 @@
  */
 package org.kaazing.messaging.example;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.client.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
-import org.kaazing.messaging.common.destination.Pipe;
+import org.kaazing.messaging.client.destination.Pipe;
 import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.util.function.Consumer;
@@ -28,20 +28,18 @@ public class PipeConsumerExample
     public static int message3Ctr = 0;
     public static void main(String[] args)
     {
-        MessagingDriver driver = new MessagingDriver();
+        Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124|streamId=10");
 
-        Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124", 10);
-
-        MessageConsumer messageConsumer1 = new MessageConsumer(driver, pipe, new Consumer<Message>() {
+        MessageConsumer messageConsumer1 = new MessageConsumer(pipe, new Consumer<Message>() {
 
             @Override
             public void accept(Message message)
             {
-                //System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()));
+                System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()));
             }
         });
 
-        MessageConsumer messageConsumer2 = new MessageConsumer(driver, pipe,
+        MessageConsumer messageConsumer2 = new MessageConsumer(pipe,
                 //message -> System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()))
                 message ->
                 {
@@ -53,7 +51,7 @@ public class PipeConsumerExample
                 }
         );
 
-        MessageConsumer messageConsumer3 = new MessageConsumer(driver, pipe,
+        MessageConsumer messageConsumer3 = new MessageConsumer(pipe,
                 //message -> System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()))
                 message ->
                 {
@@ -68,7 +66,7 @@ public class PipeConsumerExample
 
         try
         {
-            Thread.sleep(120000);
+            Thread.sleep(10000);
         } catch (InterruptedException e)
         {
             e.printStackTrace();
@@ -77,6 +75,6 @@ public class PipeConsumerExample
         messageConsumer1.close();
         messageConsumer2.close();
         messageConsumer3.close();
-        driver.close();
+        MessagingDriver.getInstance().close();
     }
 }

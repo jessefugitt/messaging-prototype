@@ -13,16 +13,17 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery;
+package org.kaazing.messaging.example;
 
-import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.Client;
-import org.kaazing.messaging.common.destination.Topic;
-import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.DiscoveryClientContext;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
+import org.kaazing.messaging.client.destination.Topic;
 import org.kaazing.messaging.common.transport.TransportHandle;
+import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.Client;
+import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.DiscoveryClientContext;
 
 import java.util.UUID;
 
-public class ClientRunner
+public class DiscoveryClientExample
 {
     public static void main(String[] args) throws InterruptedException
     {
@@ -30,12 +31,12 @@ public class ClientRunner
         //TODO(JAF): Need to pass the media driver dir to the aeron context if in embedded mode
         Client client = discoveryClientContext.getClient();
         Topic topic1 = new Topic("STOCKS.INTC");
-        DiscoverableTransport discoverableTransport1 = new DiscoverableTransport(topic1.getLogicalName(),
+        DiscoverableTransport discoverableTransport1 = new DiscoverableTransport(topic1.getName(),
                 new TransportHandle("aeron:udp?remote=127.0.0.1:40123|streamId=10", "aeron", UUID.randomUUID().toString()));
 
 
         Topic topic2 = new Topic("STOCKS.GOOG");
-        DiscoverableTransport discoverableTransport2 = new DiscoverableTransport(topic2.getLogicalName(),
+        DiscoverableTransport discoverableTransport2 = new DiscoverableTransport(topic2.getName(),
                 new TransportHandle("aeron:udp?remote=127.0.0.1:40123|streamId=11", "aeron", UUID.randomUUID().toString()));
 
         client.addListenKey("STOCKS.INTC");

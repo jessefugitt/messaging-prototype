@@ -15,8 +15,8 @@
  */
 package org.kaazing.messaging.example;
 
-import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.destination.Pipe;
+import org.kaazing.messaging.client.message.Message;
+import org.kaazing.messaging.client.destination.Pipe;
 import org.kaazing.messaging.driver.MessagingDriver;
 import org.kaazing.messaging.rx.MessageConsumerRxAdapter;
 import rx.Observable;
@@ -30,7 +30,7 @@ public class RxJavaPipeConsumerExample
     {
         MessagingDriver driver = new MessagingDriver();
 
-        Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124", 10);
+        Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124|streamId=10");
 
         Observable<Message> observableMessageConsumer = MessageConsumerRxAdapter.createObservable(driver, pipe);
 

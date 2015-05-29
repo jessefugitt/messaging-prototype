@@ -13,11 +13,11 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic;
+package org.kaazing.messaging.discovery.service.discoverabletransport.dynamic;
 
-import org.kaazing.messaging.common.discovery.DiscoveryEvent;
-import org.kaazing.messaging.common.discovery.service.DiscoveryService;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.DiscoveryEvent;
+import org.kaazing.messaging.discovery.service.DiscoveryService;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

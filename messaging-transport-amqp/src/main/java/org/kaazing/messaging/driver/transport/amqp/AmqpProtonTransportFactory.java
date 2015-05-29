@@ -1,6 +1,6 @@
 package org.kaazing.messaging.driver.transport.amqp;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.driver.transport.SendingTransport;
 import org.kaazing.messaging.driver.transport.TransportContext;
@@ -22,17 +22,17 @@ public class AmqpProtonTransportFactory implements TransportFactory
     }
 
     @Override
-    public SendingTransport createSendingTransport(TransportContext transportContext, String address, int stream) {
+    public SendingTransport createSendingTransport(TransportContext transportContext, String address) {
         return new AmqpProtonSendingTransport((AmqpProtonTransportContext) transportContext, address);
     }
 
     @Override
-    public SendingTransport createSendingTransport(TransportContext transportContext, String address, int stream, String targetTransportHandleId) {
+    public SendingTransport createSendingTransport(TransportContext transportContext, String address, String targetTransportHandleId) {
         return new AmqpProtonSendingTransport((AmqpProtonTransportContext) transportContext, address, targetTransportHandleId);
     }
 
     @Override
-    public ReceivingTransport createReceivingTransport(TransportContext transportContext, String address, int stream, Consumer<Message> messageHandler) {
+    public ReceivingTransport createReceivingTransport(TransportContext transportContext, String address, Consumer<DriverMessage> messageHandler) {
         return new AmqpProtonReceivingTransport((AmqpProtonTransportContext) transportContext, address, messageHandler);
     }
 }

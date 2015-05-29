@@ -1,19 +1,4 @@
-/*
-    Copyright 2015 Kaazing Corporation
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
- */
-package org.kaazing.messaging.common.message;
+package org.kaazing.messaging.client.message;
 
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -21,15 +6,12 @@ import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 import java.nio.ByteBuffer;
 import java.util.Properties;
 
-public class Message
-{
+public class Message {
     public static final int DEFAULT_BUFFER_SIZE = 4096;
     private DirectBuffer buffer;
     private Properties metadata;
     private int bufferOffset;
     private int bufferLength;
-
-    private int messageProducerIndex;
 
     /**
      * Creates a message without allocating an internal buffer
@@ -88,15 +70,5 @@ public class Message
     public Properties getMetadata()
     {
         return metadata;
-    }
-
-    public void setMessageProducerIndex(int messageProducerIndex)
-    {
-        this.messageProducerIndex = messageProducerIndex;
-    }
-
-    public int getMessageProducerIndex()
-    {
-        return messageProducerIndex;
     }
 }

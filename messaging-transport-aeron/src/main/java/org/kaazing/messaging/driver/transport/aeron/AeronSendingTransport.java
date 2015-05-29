@@ -15,8 +15,9 @@
  */
 package org.kaazing.messaging.driver.transport.aeron;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.driver.transport.SendingTransport;
+import org.kaazing.messaging.driver.transport.TransportContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.Publication;
@@ -55,16 +56,22 @@ public class AeronSendingTransport implements SendingTransport
     }
 
     @Override
-    public void submit(Message message)
+    public TransportContext getTransportContext()
+    {
+        return aeronTransportContext;
+    }
+
+    @Override
+    public void submit(DriverMessage driverMessage)
     {
         throw new UnsupportedOperationException("blocking submit method is not supported with this transport");
     }
 
     @Override
-    public long offer(Message message)
+    public long offer(DriverMessage driverMessage)
     {
-        LOGGER.debug("Sending message of length={} with Aeron publication on channel={}, stream={}", message.getBufferLength(), channel, streamId);
-        return publication.offer(message.getBuffer(), message.getBufferOffset(), message.getBufferLength());
+        LOGGER.debug("Sending message of length={} with Aeron publication on channel={}, stream={}", driverMessage.getBufferLength(), channel, streamId);
+        return publication.offer(driverMessage.getBuffer(), driverMessage.getBufferOffset(), driverMessage.getBufferLength());
     }
 
     @Override

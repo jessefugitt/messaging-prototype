@@ -15,13 +15,16 @@
  */
 package org.kaazing.messaging.client;
 
-import org.kaazing.messaging.common.command.ClientCommand;
+import org.kaazing.messaging.client.message.Message;
+import org.kaazing.messaging.driver.command.ClientCommand;
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.driver.MessagingDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
 
+import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
 public class MessageConsumer
@@ -32,6 +35,29 @@ public class MessageConsumer
     private final MessageFlow messageFlow;
     private long messageConsumerId;
     private final Consumer<Message> messageHandler;
+    private final ThreadLocal<Message> tlMessage = new ThreadLocal<>().withInitial(() -> new Message(Message.DEFAULT_BUFFER_SIZE));
+
+    private final Consumer<DriverMessage> driverMessageHandler = new Consumer<DriverMessage>() {
+        @Override
+        public void accept(DriverMessage driverMessage) {
+            Message clientMessage = tlMessage.get();
+            if(clientMessage.getBuffer().capacity() < driverMessage.getBufferLength())
+            {
+                //TODO(JAF): Clean this up to not have to GC direct buffers
+                UnsafeBuffer newBuffer = new UnsafeBuffer(ByteBuffer.allocateDirect(driverMessage.getBufferLength()));
+                clientMessage.setBuffer(newBuffer);
+            }
+
+            clientMessage.setBufferLength(driverMessage.getBufferLength());
+            clientMessage.setBufferOffset(driverMessage.getBufferOffset());
+            clientMessage.getUnsafeBuffer().putBytes(driverMessage.getBufferOffset(), driverMessage.getBuffer(), driverMessage.getBufferOffset(), driverMessage.getBufferLength());
+
+            if(messageHandler != null)
+            {
+                messageHandler.accept(clientMessage);
+            }
+        }
+    };
 
     public MessageConsumer(MessageFlow messageFlow, Consumer<Message> messageHandler)
     {
@@ -44,10 +70,11 @@ public class MessageConsumer
         this.messageFlow = messageFlow;
         this.messageHandler = messageHandler;
 
+
         ClientCommand clientCommand = new ClientCommand(ClientCommand.TYPE_CREATE_CONSUMER);
         clientCommand.setCommandCompletedAction(commandCompletedAction);
         clientCommand.setMessageFlow(messageFlow);
-        clientCommand.setMessageHandler(messageHandler);
+        clientCommand.setMessageHandler(driverMessageHandler);
         messagingDriver.enqueueClientCommand(clientCommand);
     }
 

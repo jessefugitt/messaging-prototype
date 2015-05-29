@@ -17,15 +17,15 @@ package org.kaazing.messaging.common.destination;
 
 public class MessageFlow
 {
-    private final String logicalName;
-    public MessageFlow(String logicalName)
+    private final String name;
+    public MessageFlow(String name)
     {
-        this.logicalName = logicalName;
+        this.name = name;
     }
 
-    public String getLogicalName()
+    public String getName()
     {
-        return logicalName;
+        return name;
     }
 
     public boolean requiresDiscovery()

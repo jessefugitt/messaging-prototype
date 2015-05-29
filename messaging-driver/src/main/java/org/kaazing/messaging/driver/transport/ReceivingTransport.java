@@ -15,11 +15,12 @@
  */
 package org.kaazing.messaging.driver.transport;
 
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 
 public interface ReceivingTransport
 {
+    public TransportContext getTransportContext();
     public TransportHandle getHandle();
     public void close();
     public boolean isPollable();

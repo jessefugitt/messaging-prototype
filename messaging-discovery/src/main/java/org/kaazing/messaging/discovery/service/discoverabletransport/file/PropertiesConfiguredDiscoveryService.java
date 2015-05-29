@@ -13,10 +13,10 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery.service.discoverabletransport.file;
+package org.kaazing.messaging.discovery.service.discoverabletransport.file;
 
-import org.kaazing.messaging.common.discovery.service.discoverabletransport.basic.BasicDiscoveryService;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.service.discoverabletransport.basic.BasicDiscoveryService;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

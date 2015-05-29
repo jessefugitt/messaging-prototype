@@ -13,18 +13,36 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.destination;
+package org.kaazing.messaging.discovery;
 
-public class Topic extends MessageFlow
+import java.util.ArrayList;
+import java.util.List;
+
+public class DiscoveryEvent<T>
 {
-    public Topic(String logicalName)
-    {
-        super(logicalName);
+    private final List<T> added = new ArrayList<T>();
+    private final List<T> updated = new ArrayList<T>();
+    private final List<T> removed = new ArrayList<T>();
+
+    public DiscoveryEvent<T> clear() {
+        added.clear();
+        updated.clear();
+        removed.clear();
+        return this;
     }
 
-    @Override
-    public boolean requiresDiscovery()
+    public List<T> getAdded()
     {
-        return true;
+        return added;
+    }
+
+    public List<T> getUpdated()
+    {
+        return updated;
+    }
+
+    public List<T> getRemoved()
+    {
+        return removed;
     }
 }

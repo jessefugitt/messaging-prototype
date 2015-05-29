@@ -13,12 +13,12 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery.service.discoverabletransport.basic;
+package org.kaazing.messaging.discovery.service.discoverabletransport.basic;
 
 
-import org.kaazing.messaging.common.discovery.DiscoveryEvent;
-import org.kaazing.messaging.common.discovery.service.DiscoveryService;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.DiscoveryEvent;
+import org.kaazing.messaging.discovery.service.DiscoveryService;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 import java.util.Map;

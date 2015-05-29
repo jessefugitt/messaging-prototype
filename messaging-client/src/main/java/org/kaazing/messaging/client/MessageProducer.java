@@ -15,9 +15,10 @@
  */
 package org.kaazing.messaging.client;
 
-import org.kaazing.messaging.common.command.ClientCommand;
+import org.kaazing.messaging.client.message.Message;
+import org.kaazing.messaging.driver.command.ClientCommand;
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.driver.MessagingDriver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,8 +37,8 @@ public class MessageProducer
 
     private final MessagingDriver messagingDriver;
     private final MessageFlow messageFlow;
-    private OneToOneConcurrentArrayQueue<Message> sendQueue;
-    private OneToOneConcurrentArrayQueue<Message> freeQueue;
+    private OneToOneConcurrentArrayQueue<DriverMessage> sendQueue;
+    private OneToOneConcurrentArrayQueue<DriverMessage> freeQueue;
     private int messageProducerIndex = -1;
     private long messageProducerId;
     private final IdleStrategy submitIdleStrategy = new BackoffIdleStrategy(
@@ -89,22 +90,22 @@ public class MessageProducer
     {
         boolean result = false;
         if(sendQueue != null) {
-            Message sendMessage = freeQueue.poll();
-            if(sendMessage != null)
+            DriverMessage sendDriverMessage = freeQueue.poll();
+            if(sendDriverMessage != null)
             {
-                if(sendMessage.getBuffer().capacity() < message.getBufferLength())
+                if(sendDriverMessage.getBuffer().capacity() < message.getBufferLength())
                 {
                     //TODO(JAF): Clean this up to not have to GC direct buffers
                     UnsafeBuffer newBuffer = new UnsafeBuffer(ByteBuffer.allocateDirect(message.getBufferLength()));
-                    sendMessage.setBuffer(newBuffer);
+                    sendDriverMessage.setBuffer(newBuffer);
                 }
 
-                sendMessage.setBufferLength(message.getBufferLength());
-                sendMessage.setBufferOffset(message.getBufferOffset());
-                sendMessage.getUnsafeBuffer().putBytes(message.getBufferOffset(), message.getBuffer(), message.getBufferOffset(), message.getBufferLength());
+                sendDriverMessage.setBufferLength(message.getBufferLength());
+                sendDriverMessage.setBufferOffset(message.getBufferOffset());
+                sendDriverMessage.getUnsafeBuffer().putBytes(message.getBufferOffset(), message.getBuffer(), message.getBufferOffset(), message.getBufferLength());
 
-                message.setMessageProducerIndex(messageProducerIndex);
-                result = sendQueue.offer(sendMessage);
+                sendDriverMessage.setMessageProducerIndex(messageProducerIndex);
+                result = sendQueue.offer(sendDriverMessage);
             }
         }
         return result;

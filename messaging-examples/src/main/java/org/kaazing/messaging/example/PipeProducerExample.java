@@ -15,20 +15,18 @@
  */
 package org.kaazing.messaging.example;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.client.message.Message;
 import org.kaazing.messaging.client.MessageProducer;
-import org.kaazing.messaging.common.destination.Pipe;
+import org.kaazing.messaging.client.destination.Pipe;
 import org.kaazing.messaging.driver.MessagingDriver;
 
 public class PipeProducerExample
 {
     public static void main(String[] args)
     {
-        MessagingDriver driver = new MessagingDriver();
+        Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124|streamId=10");
 
-        Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124", 10);
-
-        MessageProducer messageProducer = new MessageProducer(driver, pipe);
+        MessageProducer messageProducer = new MessageProducer(pipe);
 
         Message message = new Message(1024);
         message.getUnsafeBuffer().putInt(0, 567);
@@ -40,10 +38,10 @@ public class PipeProducerExample
             boolean result = messageProducer.offer(message);
             if(result)
             {
-                //if((i + 1) % 100000 == 0)
-                //{
+                if((i + 1) % 100000 == 0)
+                {
                     System.out.println("Sent message " + i + " with result: " + result);
-                //}
+                }
                 i++;
             }
 
@@ -57,6 +55,6 @@ public class PipeProducerExample
         }
 
         messageProducer.close();
-        driver.close();
+        MessagingDriver.getInstance().close();
     }
 }

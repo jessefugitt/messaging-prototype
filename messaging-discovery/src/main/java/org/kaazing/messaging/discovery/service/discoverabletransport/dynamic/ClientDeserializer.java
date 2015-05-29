@@ -13,9 +13,9 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic;
+package org.kaazing.messaging.discovery.service.discoverabletransport.dynamic;
 
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.MutableInteger;
@@ -48,6 +48,7 @@ public class ClientDeserializer
         String physicalAddress = new String(physicalAddressBytes, StandardCharsets.UTF_8);
         String transportHandleId = new String(transportHandleIdBytes, StandardCharsets.UTF_8);
 
+        //TODO(JAF): Add support for other schemes
         TransportHandle transportHandle = new TransportHandle(physicalAddress, "aeron", transportHandleId);
         DiscoverableTransport discoverableTransport = new DiscoverableTransport(logicalName, transportHandle);
 

@@ -15,12 +15,13 @@
  */
 package org.kaazing.messaging.example;
 
-import org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic.DynamicConsumerDiscoveryService;
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.DynamicConsumerDiscoveryService;
+import org.kaazing.messaging.client.message.Message;
 import org.kaazing.messaging.client.MessageConsumer;
-import org.kaazing.messaging.common.destination.Topic;
-import org.kaazing.messaging.common.discovery.service.DiscoveryService;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.client.destination.Topic;
+import org.kaazing.messaging.discovery.service.DiscoveryService;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
+import org.kaazing.messaging.discovery.service.discoverabletransport.file.PropertiesConfiguredDiscoveryService;
 import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.io.IOException;

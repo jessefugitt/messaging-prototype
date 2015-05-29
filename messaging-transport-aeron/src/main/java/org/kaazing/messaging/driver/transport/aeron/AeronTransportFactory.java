@@ -1,10 +1,11 @@
 package org.kaazing.messaging.driver.transport.aeron;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.driver.transport.SendingTransport;
 import org.kaazing.messaging.driver.transport.TransportContext;
 import org.kaazing.messaging.driver.transport.TransportFactory;
+import uk.co.real_logic.aeron.common.uri.AeronUri;
 
 import java.util.function.Consumer;
 
@@ -21,17 +22,33 @@ public class AeronTransportFactory implements TransportFactory
     }
 
     @Override
-    public SendingTransport createSendingTransport(TransportContext transportContext, String address, int stream) {
-        return new AeronSendingTransport((AeronTransportContext) transportContext, address, stream);
+    public SendingTransport createSendingTransport(TransportContext transportContext, String address) {
+        int streamId = getStreamIdFromAddress(address);
+
+        return new AeronSendingTransport((AeronTransportContext) transportContext, address, streamId);
     }
 
     @Override
-    public SendingTransport createSendingTransport(TransportContext transportContext, String address, int stream, String targetTransportHandleId) {
-        return new AeronSendingTransport((AeronTransportContext) transportContext, address, stream, targetTransportHandleId);
+    public SendingTransport createSendingTransport(TransportContext transportContext, String address,String targetTransportHandleId) {
+        int streamId = getStreamIdFromAddress(address);
+        return new AeronSendingTransport((AeronTransportContext) transportContext, address, streamId, targetTransportHandleId);
     }
 
     @Override
-    public ReceivingTransport createReceivingTransport(TransportContext transportContext, String address, int stream, Consumer<Message> messageHandler) {
-        return new AeronReceivingTransport((AeronTransportContext) transportContext, address, stream, messageHandler);
+    public ReceivingTransport createReceivingTransport(TransportContext transportContext, String address, Consumer<DriverMessage> messageHandler)
+    {
+        int streamId = getStreamIdFromAddress(address);
+        return new AeronReceivingTransport((AeronTransportContext) transportContext, address, streamId, messageHandler);
+    }
+
+    private int getStreamIdFromAddress(String address)
+    {
+        int streamId = 0;
+        AeronUri aeronUri = AeronUri.parse(address);
+        if(aeronUri.get("streamId") != null)
+        {
+            streamId = Integer.parseInt(aeronUri.get("streamId"));
+        }
+        return streamId;
     }
 }

@@ -15,9 +15,9 @@
  */
 package org.kaazing.messaging.example;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.client.message.Message;
 import org.kaazing.messaging.client.MessageProducer;
-import org.kaazing.messaging.common.destination.Pipe;
+import org.kaazing.messaging.client.destination.Pipe;
 import org.kaazing.messaging.driver.MessagingDriver;
 
 import java.io.IOException;

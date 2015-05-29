@@ -19,7 +19,7 @@ sourceCompatibility = 1.8
 version = '0.0.1'
 
 dependencies {
-    compile project(':messaging-common')
+    compile project(':messaging-discovery')
 
     //ZooKeeper discovery service
     compile 'org.apache.curator:curator-recipes:2.7.1'

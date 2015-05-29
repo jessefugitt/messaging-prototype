@@ -20,4 +20,5 @@ version = '0.0.1'
 
 dependencies {
     compile project(':messaging-common')
+    compile project(':messaging-discovery')
 }

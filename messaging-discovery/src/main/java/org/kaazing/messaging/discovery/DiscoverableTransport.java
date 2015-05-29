@@ -13,11 +13,28 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic;
+package org.kaazing.messaging.discovery;
 
-public class DiscoveryConfiguration
-{
-    public static final boolean EMBEDDED_MEDIA_DRIVER = false;
-    public static final int FRAGMENT_COUNT_LIMIT = 40;
-    public static final int STREAM_ID = 10;
+import org.kaazing.messaging.common.transport.TransportHandle;
+
+public class DiscoverableTransport implements Discoverable {
+    private String key;
+    private TransportHandle transportHandle;
+
+    public DiscoverableTransport(String key, TransportHandle transportHandle)
+    {
+        this.key = key;
+        this.transportHandle = transportHandle;
+    }
+
+    public TransportHandle getTransportHandle()
+    {
+        return transportHandle;
+    }
+
+    @Override
+    public String getKey()
+    {
+        return key;
+    }
 }

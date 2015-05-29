@@ -13,25 +13,8 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.destination;
+package org.kaazing.messaging.discovery;
 
-public class Pipe extends MessageFlow
-{
-    private final int streamId;
-    public Pipe(String logicalName, int streamId)
-    {
-        super(logicalName);
-        this.streamId = streamId;
-    }
-
-    public Pipe(String logicalName)
-    {
-        super(logicalName);
-        this.streamId = 0;
-    }
-
-    public int getStreamId()
-    {
-        return streamId;
-    }
+public interface Discoverable {
+    public String getKey();
 }

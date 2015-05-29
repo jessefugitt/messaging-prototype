@@ -4,7 +4,7 @@ sourceCompatibility = 1.8
 version = '0.0.1'
 
 dependencies {
-    compile project(':messaging-common')
+    compile project(':messaging-discovery')
 
     compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT'
     compile 'uk.co.real-logic:aeron-common:0.1-SNAPSHOT'

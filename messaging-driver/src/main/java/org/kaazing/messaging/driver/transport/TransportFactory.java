@@ -1,6 +1,6 @@
 package org.kaazing.messaging.driver.transport;
 
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 
 import java.util.function.Consumer;
 
@@ -10,8 +10,8 @@ public interface TransportFactory
     public TransportContext createTransportContext();
 
     //TODO(JAF): Implement a generic way to pass extra information like stream
-    public SendingTransport createSendingTransport(TransportContext transportContext, String address, int stream);
-    public SendingTransport createSendingTransport(TransportContext transportContext, String address, int stream, String targetTransportHandleId);
-    public ReceivingTransport createReceivingTransport(TransportContext transportContext, String address, int stream, Consumer<Message> messageHandler);
+    public SendingTransport createSendingTransport(TransportContext transportContext, String address);
+    public SendingTransport createSendingTransport(TransportContext transportContext, String address, String targetTransportHandleId);
+    public ReceivingTransport createReceivingTransport(TransportContext transportContext, String address, Consumer<DriverMessage> messageHandler);
 
 }

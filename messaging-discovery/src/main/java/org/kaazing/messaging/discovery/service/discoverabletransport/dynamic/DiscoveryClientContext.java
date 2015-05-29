@@ -13,7 +13,7 @@
     See the License for the specific language governing permissions and
     limitations under the License.
  */
-package org.kaazing.messaging.common.discovery.service.discoverabletransport.dynamic;
+package org.kaazing.messaging.discovery.service.discoverabletransport.dynamic;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

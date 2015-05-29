@@ -1,7 +1,8 @@
-package org.kaazing.messaging.common.command;
+package org.kaazing.messaging.driver.command;
 
+import org.kaazing.messaging.common.command.Command;
 import org.kaazing.messaging.common.destination.MessageFlow;
-import org.kaazing.messaging.common.message.Message;
+import org.kaazing.messaging.driver.message.DriverMessage;
 import uk.co.real_logic.agrona.concurrent.OneToOneConcurrentArrayQueue;
 
 import java.util.function.Consumer;
@@ -16,11 +17,11 @@ public class ClientCommand implements Command
     private int messageProducerIndex;
     private long messageProducerId;
     private MessageFlow messageFlow;
-    private OneToOneConcurrentArrayQueue<Message> sendQueue;
-    private OneToOneConcurrentArrayQueue<Message> freeQueue;
+    private OneToOneConcurrentArrayQueue<DriverMessage> sendQueue;
+    private OneToOneConcurrentArrayQueue<DriverMessage> freeQueue;
 
     private long messageConsumerId;
-    private Consumer<Message> messageHandler;
+    private Consumer<DriverMessage> messageHandler;
 
     private Consumer<ClientCommand> commandCompletedAction;
 
@@ -60,27 +61,27 @@ public class ClientCommand implements Command
         this.messageFlow = messageFlow;
     }
 
-    public OneToOneConcurrentArrayQueue<Message> getSendQueue() {
+    public OneToOneConcurrentArrayQueue<DriverMessage> getSendQueue() {
         return sendQueue;
     }
 
-    public void setSendQueue(OneToOneConcurrentArrayQueue<Message> sendQueue) {
+    public void setSendQueue(OneToOneConcurrentArrayQueue<DriverMessage> sendQueue) {
         this.sendQueue = sendQueue;
     }
 
-    public OneToOneConcurrentArrayQueue<Message> getFreeQueue() {
+    public OneToOneConcurrentArrayQueue<DriverMessage> getFreeQueue() {
         return freeQueue;
     }
 
-    public void setFreeQueue(OneToOneConcurrentArrayQueue<Message> freeQueue) {
+    public void setFreeQueue(OneToOneConcurrentArrayQueue<DriverMessage> freeQueue) {
         this.freeQueue = freeQueue;
     }
 
-    public Consumer<Message> getMessageHandler() {
+    public Consumer<DriverMessage> getMessageHandler() {
         return messageHandler;
     }
 
-    public void setMessageHandler(Consumer<Message> messageHandler) {
+    public void setMessageHandler(Consumer<DriverMessage> messageHandler) {
         this.messageHandler = messageHandler;
     }
 

@@ -15,10 +15,11 @@
  */
 package org.kaazing.messaging.driver.transport.aeron;
 
-import org.kaazing.messaging.common.message.Message;
-import org.kaazing.messaging.common.discovery.DiscoverableTransport;
+import org.kaazing.messaging.driver.message.DriverMessage;
+import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
+import org.kaazing.messaging.driver.transport.TransportContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.Subscription;
@@ -37,12 +38,12 @@ public class AeronReceivingTransport implements ReceivingTransport, DataHandler
     private final int streamId;
     private final Subscription subscription;
     private final AeronTransportContext aeronTransportContext;
-    private final Consumer<Message> messageHandler;
+    private final Consumer<DriverMessage> messageHandler;
     private final TransportHandle handle;
     private DiscoverableTransport discoverableTransport;
-    private final ThreadLocal<Message> tlMessage = new ThreadLocal<>().withInitial(() -> new Message());
+    private final ThreadLocal<DriverMessage> tlMessage = new ThreadLocal<>().withInitial(() -> new DriverMessage());
 
-    public AeronReceivingTransport(AeronTransportContext aeronTransportContext, String channel, int streamId, Consumer<Message> messageHandler)
+    public AeronReceivingTransport(AeronTransportContext aeronTransportContext, String channel, int streamId, Consumer<DriverMessage> messageHandler)
     {
         this.aeronTransportContext = aeronTransportContext;
         this.channel = channel;
@@ -53,6 +54,12 @@ public class AeronReceivingTransport implements ReceivingTransport, DataHandler
         this.subscription = aeronTransportContext.getAeron().addSubscription(channel, streamId, this);
         this.messageHandler = messageHandler;
         this.handle = new TransportHandle(channel, "aeron", UUID.randomUUID().toString());
+    }
+
+    @Override
+    public TransportContext getTransportContext()
+    {
+        return aeronTransportContext;
     }
 
     @Override
@@ -83,13 +90,13 @@ public class AeronReceivingTransport implements ReceivingTransport, DataHandler
     public void onData(DirectBuffer buffer, int offset, int length, Header header)
     {
         LOGGER.debug("Received message of length={} with subscription on channel={}, stream={}", length, channel, streamId);
-        Message message = tlMessage.get();
-        message.setBuffer(buffer);
-        message.setBufferOffset(offset);
-        message.setBufferLength(length);
+        DriverMessage driverMessage = tlMessage.get();
+        driverMessage.setBuffer(buffer);
+        driverMessage.setBufferOffset(offset);
+        driverMessage.setBufferLength(length);
         //TODO(JAF): Map header information into message metadata
 
-        messageHandler.accept(message);
+        messageHandler.accept(driverMessage);
     }
 
     @Override
