@@ -20,8 +20,8 @@ import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
@@ -97,7 +97,7 @@ public class DiscoveryClientContext
         publication = aeron.addPublication(outgoingChannel, STREAM_ID);
         LOGGER.info("Publishing to channel={}, stream={} to produce discovery events", outgoingChannel, STREAM_ID);
 
-        subscription = aeron.addSubscription(INCOMING_CHANNEL, STREAM_ID, dataHandler);
+        subscription = aeron.addSubscription(INCOMING_CHANNEL, STREAM_ID);
         LOGGER.info("Subscribing to channel={}, stream={} to consume discovery events", INCOMING_CHANNEL, STREAM_ID);
 
         executor.execute(() -> runDiscoveryLoop());
@@ -135,7 +135,7 @@ public class DiscoveryClientContext
                     lastSentTimestamp = System.currentTimeMillis();
                 }
             }
-            final int fragmentsRead = subscription.poll(FRAGMENT_COUNT_LIMIT);
+            final int fragmentsRead = subscription.poll(dataHandler, FRAGMENT_COUNT_LIMIT);
             idleStrategy.idle(fragmentsRead);
         }
     }
@@ -157,10 +157,10 @@ public class DiscoveryClientContext
         CloseHelper.quietClose(aeron);
     }
 
-    private final DataHandler dataHandler = new DataHandler()
+    private final FragmentHandler dataHandler = new FragmentHandler()
     {
         @Override
-        public void onData(DirectBuffer buffer, int offset, int length, Header header)
+        public void onFragment(DirectBuffer buffer, int offset, int length, Header header)
         {
             Client remoteClient = deserializer.deserialize(buffer, offset);
             LOGGER.debug("Received discovery event from client instance={}, revision={}", remoteClient.getInstanceId(), remoteClient.getRevision());

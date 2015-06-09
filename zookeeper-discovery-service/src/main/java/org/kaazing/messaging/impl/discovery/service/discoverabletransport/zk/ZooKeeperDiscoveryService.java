@@ -17,6 +17,7 @@ package org.kaazing.messaging.impl.discovery.service.discoverabletransport.zk;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.kaazing.messaging.common.collections.AtomicArray;
 import org.kaazing.messaging.discovery.DiscoveryEvent;
 import org.kaazing.messaging.discovery.service.DiscoveryService;
 import org.kaazing.messaging.discovery.DiscoverableTransport;
@@ -30,7 +31,6 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;

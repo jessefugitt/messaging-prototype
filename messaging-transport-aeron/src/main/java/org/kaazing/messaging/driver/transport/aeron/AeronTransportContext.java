@@ -15,12 +15,10 @@
  */
 package org.kaazing.messaging.driver.transport.aeron;
 
+import org.kaazing.messaging.common.collections.AtomicArray;
 import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.driver.transport.TransportContext;
 import uk.co.real_logic.aeron.Aeron;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
-
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class AeronTransportContext implements TransportContext
 {

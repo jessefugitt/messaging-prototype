@@ -15,6 +15,7 @@
  */
 package org.kaazing.messaging.driver;
 
+import org.kaazing.messaging.common.collections.AtomicArray;
 import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
 import org.kaazing.messaging.driver.command.ClientCommand;
 import org.kaazing.messaging.discovery.DiscoverableTransport;
@@ -33,7 +34,7 @@ import org.kaazing.messaging.driver.transport.TransportFactory;
 import org.kaazing.messaging.driver.command.DriverCommand;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.real_logic.aeron.common.uri.AeronUri;
+import uk.co.real_logic.aeron.driver.uri.AeronUri;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.agrona.concurrent.*;
 

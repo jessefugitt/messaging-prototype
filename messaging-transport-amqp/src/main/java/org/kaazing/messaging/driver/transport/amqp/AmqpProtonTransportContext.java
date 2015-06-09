@@ -18,11 +18,11 @@ package org.kaazing.messaging.driver.transport.amqp;
 import org.apache.qpid.proton.message.Message;
 import org.apache.qpid.proton.messenger.Messenger;
 import org.apache.qpid.proton.messenger.impl.MessengerImpl;
+import org.kaazing.messaging.common.collections.AtomicArray;
 import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.driver.transport.TransportContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 
 import java.io.IOException;

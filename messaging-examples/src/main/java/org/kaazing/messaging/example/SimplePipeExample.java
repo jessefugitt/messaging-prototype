@@ -12,16 +12,14 @@ public class SimplePipeExample
     {
         Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124|streamId=10");
 
-        MessagingDriver driver = new MessagingDriver(0);
+        MessagingDriver driver = new MessagingDriver();
+
+
         MessageConsumer messageConsumer = new MessageConsumer(driver, pipe,
                 (message) -> System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()))
         );
 
         MessageProducer messageProducer = new MessageProducer(driver, pipe);
-
-
-
-
 
         Message message = new Message(1024);
         message.getUnsafeBuffer().putInt(0, 567);
@@ -37,9 +35,6 @@ public class SimplePipeExample
                 i++;
                 System.out.println("Sent message " + i);
             }
-            driver.doCommandWork();
-            driver.doReceiveWork();
-            driver.doSendWork();
         }
 
         try {

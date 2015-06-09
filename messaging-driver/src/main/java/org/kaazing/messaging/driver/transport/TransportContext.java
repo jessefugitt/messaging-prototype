@@ -15,7 +15,7 @@
  */
 package org.kaazing.messaging.driver.transport;
 
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
+import org.kaazing.messaging.common.collections.AtomicArray;
 
 public interface TransportContext
 {

@@ -23,14 +23,14 @@ import org.kaazing.messaging.driver.transport.TransportContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.DirectBuffer;
 
 import java.util.UUID;
 import java.util.function.Consumer;
 
-public class AeronReceivingTransport implements ReceivingTransport, DataHandler
+public class AeronReceivingTransport implements ReceivingTransport, FragmentHandler
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(AeronReceivingTransport.class);
 
@@ -51,7 +51,7 @@ public class AeronReceivingTransport implements ReceivingTransport, DataHandler
 
         LOGGER.info("Creating Aeron subscription on channel={}, stream={}", channel, streamId);
 
-        this.subscription = aeronTransportContext.getAeron().addSubscription(channel, streamId, this);
+        this.subscription = aeronTransportContext.getAeron().addSubscription(channel, streamId);
         this.messageHandler = messageHandler;
         this.handle = new TransportHandle(channel, "aeron", UUID.randomUUID().toString());
     }
@@ -87,7 +87,7 @@ public class AeronReceivingTransport implements ReceivingTransport, DataHandler
     }
 
     @Override
-    public void onData(DirectBuffer buffer, int offset, int length, Header header)
+    public void onFragment(DirectBuffer buffer, int offset, int length, Header header)
     {
         LOGGER.debug("Received message of length={} with subscription on channel={}, stream={}", length, channel, streamId);
         DriverMessage driverMessage = tlMessage.get();
@@ -102,7 +102,7 @@ public class AeronReceivingTransport implements ReceivingTransport, DataHandler
     @Override
     public int poll(final int limit)
     {
-        return subscription.poll(limit);
+        return subscription.poll(this, limit);
     }
 
     @Override

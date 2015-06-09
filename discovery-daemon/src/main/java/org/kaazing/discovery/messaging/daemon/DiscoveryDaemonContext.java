@@ -15,6 +15,7 @@
  */
 package org.kaazing.discovery.messaging.daemon;
 
+import org.kaazing.messaging.common.collections.AtomicArray;
 import org.kaazing.messaging.discovery.Discoverable;
 import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.Client;
 import org.kaazing.messaging.discovery.service.discoverabletransport.dynamic.ClientDeserializer;
@@ -26,13 +27,12 @@ import org.slf4j.LoggerFactory;
 import uk.co.real_logic.aeron.Aeron;
 import uk.co.real_logic.aeron.Publication;
 import uk.co.real_logic.aeron.Subscription;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.DataHandler;
-import uk.co.real_logic.aeron.common.concurrent.logbuffer.Header;
 import uk.co.real_logic.aeron.driver.MediaDriver;
+import uk.co.real_logic.aeron.logbuffer.FragmentHandler;
+import uk.co.real_logic.aeron.logbuffer.Header;
 import uk.co.real_logic.agrona.CloseHelper;
 import uk.co.real_logic.agrona.DirectBuffer;
 import uk.co.real_logic.agrona.collections.Long2ObjectHashMap;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
 import uk.co.real_logic.agrona.concurrent.BackoffIdleStrategy;
 import uk.co.real_logic.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.agrona.concurrent.UnsafeBuffer;
@@ -172,7 +172,7 @@ public class DiscoveryDaemonContext
 
         aeron = Aeron.connect(ctx);
 
-        subscription = aeron.addSubscription(INCOMING_CHANNEL, STREAM_ID, dataHandler);
+        subscription = aeron.addSubscription(INCOMING_CHANNEL, STREAM_ID);
         LOGGER.info("Subscribing to channel={}, stream={} to consume discovery events", INCOMING_CHANNEL, STREAM_ID);
 
         executor.execute(() -> runDiscoveryLoop());
@@ -207,7 +207,7 @@ public class DiscoveryDaemonContext
             sendHeartbeat(existingClient);
             */
 
-            final int fragmentsRead = subscription.poll(FRAGMENT_COUNT_LIMIT);
+            final int fragmentsRead = subscription.poll(fragmentHandler, FRAGMENT_COUNT_LIMIT);
             idleStrategy.idle(fragmentsRead);
         }
     }
@@ -229,10 +229,10 @@ public class DiscoveryDaemonContext
         CloseHelper.quietClose(driver);
     }
 
-    private final DataHandler dataHandler = new DataHandler()
+    private final FragmentHandler fragmentHandler = new FragmentHandler()
     {
         @Override
-        public void onData(DirectBuffer buffer, int offset, int length, Header header)
+        public void onFragment(DirectBuffer buffer, int offset, int length, Header header)
         {
             Client newClient = deserializer.deserialize(buffer, offset);
             LOGGER.debug("Received discovery event from client instance={}, revision={}", newClient.getInstanceId(), newClient.getRevision());

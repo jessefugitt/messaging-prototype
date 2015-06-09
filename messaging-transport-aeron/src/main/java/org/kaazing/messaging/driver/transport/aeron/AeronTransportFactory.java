@@ -5,7 +5,7 @@ import org.kaazing.messaging.driver.transport.ReceivingTransport;
 import org.kaazing.messaging.driver.transport.SendingTransport;
 import org.kaazing.messaging.driver.transport.TransportContext;
 import org.kaazing.messaging.driver.transport.TransportFactory;
-import uk.co.real_logic.aeron.common.uri.AeronUri;
+import uk.co.real_logic.aeron.driver.uri.AeronUri;
 
 import java.util.function.Consumer;
 

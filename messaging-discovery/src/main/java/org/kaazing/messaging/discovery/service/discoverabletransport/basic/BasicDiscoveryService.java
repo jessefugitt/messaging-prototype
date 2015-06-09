@@ -16,10 +16,10 @@
 package org.kaazing.messaging.discovery.service.discoverabletransport.basic;
 
 
+import org.kaazing.messaging.common.collections.AtomicArray;
 import org.kaazing.messaging.discovery.DiscoveryEvent;
 import org.kaazing.messaging.discovery.service.DiscoveryService;
 import org.kaazing.messaging.discovery.DiscoverableTransport;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

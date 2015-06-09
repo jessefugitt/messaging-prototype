@@ -20,7 +20,7 @@ import org.kaazing.messaging.discovery.DiscoverableTransport;
 import org.kaazing.messaging.common.transport.TransportHandle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import uk.co.real_logic.aeron.common.uri.AeronUri;
+import uk.co.real_logic.aeron.driver.uri.AeronUri;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

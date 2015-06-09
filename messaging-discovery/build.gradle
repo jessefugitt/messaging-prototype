@@ -23,5 +23,6 @@ dependencies {
 
     compile 'uk.co.real-logic:Agrona:0.3.2-SNAPSHOT'
     compile 'uk.co.real-logic:aeron-client:0.1-SNAPSHOT'
-    compile 'uk.co.real-logic:aeron-common:0.1-SNAPSHOT'
+    //For AeronUri
+    compile 'uk.co.real-logic:aeron-driver:0.1-SNAPSHOT'
 }

@@ -15,8 +15,8 @@
  */
 package org.kaazing.messaging.discovery.service;
 
+import org.kaazing.messaging.common.collections.AtomicArray;
 import org.kaazing.messaging.discovery.DiscoveryEvent;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 import java.util.function.Consumer;
 

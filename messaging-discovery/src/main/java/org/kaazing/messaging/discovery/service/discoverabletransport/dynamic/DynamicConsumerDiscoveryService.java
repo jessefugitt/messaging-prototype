@@ -15,6 +15,7 @@
  */
 package org.kaazing.messaging.discovery.service.discoverabletransport.dynamic;
 
+import org.kaazing.messaging.common.collections.AtomicArray;
 import org.kaazing.messaging.discovery.DiscoveryEvent;
 import org.kaazing.messaging.discovery.service.DiscoveryService;
 import org.kaazing.messaging.discovery.DiscoverableTransport;
@@ -22,7 +23,6 @@ import org.kaazing.messaging.common.collections.AtomicArrayWithArg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import uk.co.real_logic.agrona.collections.MutableInteger;
-import uk.co.real_logic.agrona.concurrent.AtomicArray;
 
 import java.util.Collection;
 import java.util.Map;
