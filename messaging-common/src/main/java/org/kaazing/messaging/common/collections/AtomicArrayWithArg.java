@@ -34,7 +34,7 @@ public class AtomicArrayWithArg<T, A> extends AtomicArray<T>
      */
     public int doActionWithArg(int fromIndex, final ToLongBiFunction<? super T, A> action, final A arg)
     {
-        final T[] array = (T[]) super.array();
+        final T[] array = (T[]) super.arrayRef();
         final int length = array.length;
         if (length == 0)
         {
@@ -78,7 +78,7 @@ public class AtomicArrayWithArg<T, A> extends AtomicArray<T>
     public boolean doActionWithArgToBoolean(int fromIndex, final ToLongBiFunction<? super T, A> action, final A arg)
     {
         boolean result = true;
-        final T[] array = (T[]) super.array();
+        final T[] array = (T[]) super.arrayRef();
         final int length = array.length;
         if (length > 0)
         {

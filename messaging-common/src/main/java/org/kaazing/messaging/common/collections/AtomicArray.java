@@ -48,7 +48,7 @@ public class AtomicArray<T> implements Collection<T>
      *
      * @return the array reference
      */
-    public T[] array()
+    protected T[] arrayRef()
     {
         return (T[])arrayRef;
     }

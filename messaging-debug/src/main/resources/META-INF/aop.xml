@@ -1,0 +1,11 @@
+<aspectj>
+    <aspects>
+        <aspect name="org.kaazing.messaging.debug.LoggingAspect"/>
+    </aspects>
+
+    <weaver options="-verbose">
+        <include within="uk.co.real_logic.aeron..*"/>
+        <include within="org.kaazing.messaging.debug.LoggingAspect"/>
+    </weaver>
+</aspectj>
+

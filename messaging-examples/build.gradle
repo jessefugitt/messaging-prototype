@@ -14,9 +14,11 @@
     limitations under the License.
  */
 apply plugin: 'java'
+apply plugin: 'application'
 
 sourceCompatibility = 1.8
 version = '0.0.1'
+mainClassName= 'org.kaazing.messaging.example.Demo'
 
 dependencies {
     compile project(':messaging-client')
@@ -28,7 +30,7 @@ dependencies {
     //Required only for using Discovery in examples
     compile project(':messaging-discovery')
     //Required only for using Zookeeper Discovery in examples
-    compile project(':zookeeper-discovery-service')
+    //compile project(':zookeeper-discovery-service')
 
     //Pluggable transports
     runtime project(':messaging-transport-aeron')

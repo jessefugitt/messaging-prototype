@@ -45,7 +45,7 @@ public class PipeProducerExample
                 i++;
             }
 
-            System.out.println("Sent message with result: " + result);
+            //System.out.println("Sent message with result: " + result);
         }
 
         try {
