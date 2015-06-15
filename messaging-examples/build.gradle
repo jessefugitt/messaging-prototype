@@ -35,6 +35,7 @@ dependencies {
     //Pluggable transports
     runtime project(':messaging-transport-aeron')
     runtime project(':messaging-transport-amqp')
+    runtime project(':messaging-transport-netty')
 
     //RxJava - required only for using Rx in examples
     compile 'io.reactivex:rxjava:1.0.9'

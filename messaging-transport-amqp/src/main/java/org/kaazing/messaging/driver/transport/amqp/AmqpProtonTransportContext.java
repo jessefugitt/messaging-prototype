@@ -35,7 +35,7 @@ public class AmqpProtonTransportContext implements TransportContext
     private static final Logger LOGGER = LoggerFactory.getLogger(AmqpProtonTransportContext.class);
 
     //TODO(JAF): Change this to be an interface scan instead of localhost
-    public static final String DEFAULT_AMQP_SUBSCRIPTION_ADDRESS = "amqp://~127.0.0.1:5672";
+    //public static final String DEFAULT_AMQP_SUBSCRIPTION_ADDRESS = "amqp://~127.0.0.1:5672";
     private final Messenger messenger;
 
     private final AtomicInteger numSubscribers = new AtomicInteger(0);

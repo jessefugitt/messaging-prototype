@@ -28,7 +28,8 @@ public class PipeConsumerExample
     public static int message3Ctr = 0;
     public static void main(String[] args)
     {
-        Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124|streamId=10");
+        //Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124|streamId=10");
+        Pipe pipe = new Pipe("tcp://127.0.0.1:40124");
 
         MessageConsumer messageConsumer1 = new MessageConsumer(pipe, new Consumer<Message>() {
 
@@ -38,7 +39,7 @@ public class PipeConsumerExample
                 System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()));
             }
         });
-
+/*
         MessageConsumer messageConsumer2 = new MessageConsumer(pipe,
                 //message -> System.out.println("Received message with payload: " + message.getBuffer().getInt(message.getBufferOffset()))
                 message ->
@@ -62,19 +63,20 @@ public class PipeConsumerExample
                     }
                 }
         );
+        */
 
 
         try
         {
-            Thread.sleep(10000);
+            Thread.sleep(60000);
         } catch (InterruptedException e)
         {
             e.printStackTrace();
         }
 
         messageConsumer1.close();
-        messageConsumer2.close();
-        messageConsumer3.close();
+        //messageConsumer2.close();
+        //messageConsumer3.close();
         MessagingDriver.getInstance().close();
     }
 }

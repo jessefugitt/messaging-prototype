@@ -24,7 +24,8 @@ public class PipeProducerExample
 {
     public static void main(String[] args)
     {
-        Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124|streamId=10");
+        //Pipe pipe = new Pipe("aeron:udp?remote=127.0.0.1:40124|streamId=10");
+        Pipe pipe = new Pipe("tcp://127.0.0.1:40124");
 
         MessageProducer messageProducer = new MessageProducer(pipe);
 
@@ -32,6 +33,12 @@ public class PipeProducerExample
         message.getUnsafeBuffer().putInt(0, 567);
         message.setBufferOffset(0);
         message.setBufferLength(4);
+
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         for(int i = 0; i < 10; )
         {
@@ -49,7 +56,7 @@ public class PipeProducerExample
         }
 
         try {
-            Thread.sleep(1000);
+            Thread.sleep(10000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
