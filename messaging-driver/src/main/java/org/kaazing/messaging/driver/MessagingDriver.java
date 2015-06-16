@@ -327,7 +327,11 @@ public class MessagingDriver
         {
             //Create a single sending transport if possible when there is no discovery service
             SendingTransport sendingTransport = createSendingTransport(producerMapping.getMessageFlow());
-            producerMapping.getSendingTransports().add(sendingTransport);
+            if(sendingTransport != null)
+            {
+                producerMapping.getSendingTransports().add(sendingTransport);
+            }
+
         }
         return producerMapping;
     }

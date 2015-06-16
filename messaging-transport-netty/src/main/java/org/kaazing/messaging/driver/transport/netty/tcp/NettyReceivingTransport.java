@@ -44,15 +44,18 @@ public class NettyReceivingTransport implements ReceivingTransport
     private final Channel receivingChannel;
     private final InetSocketAddress inetSocketAddress;
     private final ThreadLocal<DriverMessage> tlMessage = new ThreadLocal<DriverMessage>().withInitial(() -> new DriverMessage(defaultBufferSize));
+    private final boolean inAddrAny;
 
     public NettyReceivingTransport(NettyTransportContext nettyTransportContext, String address, Consumer<DriverMessage> messageHandler)
     {
         this.nettyTransportContext = nettyTransportContext;
         this.address = address;
         final URI uri;
-        try {
+        final int uriPort;
+        try
+        {
             uri = new URI(address);
-            final int uriPort = uri.getPort();
+            uriPort = uri.getPort();
             if (uriPort < 0)
             {
                 throw new IllegalArgumentException("Port must be specified");
@@ -62,19 +65,36 @@ public class NettyReceivingTransport implements ReceivingTransport
             receivingChannel = nettyTransportContext.getServerBootstrap().bind(hostAddress, uriPort).sync().channel();
             //receivingChannel.pipeline().addLast(nettyChannelHandlerAdapter);
 
-        } catch (URISyntaxException e) {
+        }
+        catch (URISyntaxException e)
+        {
             LOGGER.error("Error parsing address", e);
             throw new IllegalArgumentException("Failed to parse address: " + address);
-        } catch (UnknownHostException e) {
+        }
+        catch (UnknownHostException e)
+        {
             LOGGER.error("Error resolving host", e);
             throw new IllegalArgumentException("Failed to resolve host: " + address);
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e)
+        {
             LOGGER.error("Interrupted", e);
             throw new IllegalArgumentException("Interrupted while binding to address: " + address);
         }
 
         this.messageHandler = messageHandler;
         this.handle = new TransportHandle(address, "tcp", UUID.randomUUID().toString());
+
+        InetSocketAddress inAddrAnyv4 = new InetSocketAddress("0.0.0.0", uriPort);
+        InetSocketAddress inAddrAnyv6 = new InetSocketAddress("::", uriPort);
+        if(inAddrAnyv4.equals(inetSocketAddress) || inAddrAnyv6.equals(inetSocketAddress))
+        {
+            inAddrAny = true;
+        }
+        else
+        {
+            inAddrAny = false;
+        }
 
         nettyTransportContext.addReceivingTransport(this);
     }
@@ -113,6 +133,11 @@ public class NettyReceivingTransport implements ReceivingTransport
         return inetSocketAddress;
     }
 
+    public boolean isInAddrAny()
+    {
+        return inAddrAny;
+    }
+
     @Override
     public void close()
     {
@@ -138,7 +163,6 @@ public class NettyReceivingTransport implements ReceivingTransport
         {
             DriverMessage driverMessage = tlMessage.get();
             final int length = buf.readableBytes();
-            LOGGER.debug("Received message of length {}", length);
 
             if (buf.hasArray()) {
                 driverMessage.getUnsafeBuffer().putBytes(0, buf.array(), buf.arrayOffset(), length);

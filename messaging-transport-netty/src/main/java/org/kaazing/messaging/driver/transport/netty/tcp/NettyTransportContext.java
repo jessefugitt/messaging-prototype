@@ -23,6 +23,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
@@ -101,11 +102,13 @@ public class NettyTransportContext implements TransportContext
                         if (serverSslCtx != null) {
                             p.addLast(serverSslCtx.newHandler(ch.alloc()));
                         }
+                        p.addLast(new LengthFieldBasedFrameDecoder(1000000, 0, 4, 0, 4));
                         serverReceivingTransportsLock.readLock().lock();
                         try
                         {
                             serverReceivingTransports.forEach((nettyReceivingTransport) -> {
-                                if(ch.localAddress().equals(nettyReceivingTransport.getInetSocketAddress()))
+                                if(ch.localAddress().equals(nettyReceivingTransport.getInetSocketAddress()) ||
+                                        nettyReceivingTransport.isInAddrAny() && ch.localAddress().getPort() == nettyReceivingTransport.getInetSocketAddress().getPort())
                                 {
                                     p.addLast(nettyReceivingTransport.getNettyChannelHandler());
                                 }

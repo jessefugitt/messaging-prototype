@@ -48,22 +48,12 @@ dependencies {
     runtime 'org.apache.logging.log4j:log4j-core:2.3'
 }
 
-task PipePublisher(type:JavaExec) {
-    main = 'PipePublisherExample'
+task PipeConsumerExample(type:JavaExec) {
+    main = 'org.kaazing.messaging.example.PipeConsumerExample'
     classpath = sourceSets.main.runtimeClasspath
 }
 
-task PipeSubscriber(type:JavaExec) {
-    main = 'PipeSubscriberExample'
-    classpath = sourceSets.main.runtimeClasspath
-}
-
-task PubSubPipe(type:JavaExec) {
-    main = 'PubSubPipeExample'
-    classpath = sourceSets.main.runtimeClasspath
-}
-
-task PubSubTopic(type:JavaExec) {
-    main = 'PubSubTopicExample'
+task PipeProducerExample(type:JavaExec) {
+    main = 'org.kaazing.messaging.example.PipeProducerExample'
     classpath = sourceSets.main.runtimeClasspath
 }

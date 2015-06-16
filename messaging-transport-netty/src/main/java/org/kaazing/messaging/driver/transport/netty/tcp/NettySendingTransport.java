@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.handler.codec.LengthFieldPrepender;
 import org.kaazing.messaging.driver.message.DriverMessage;
 import org.kaazing.messaging.driver.transport.SendingTransport;
 import org.kaazing.messaging.driver.transport.TransportContext;
@@ -61,6 +62,7 @@ public class NettySendingTransport implements SendingTransport
             final InetAddress hostAddress = InetAddress.getByName(uri.getHost());
             this.inetSocketAddress = new InetSocketAddress(hostAddress, uriPort);
             sendingChannel = nettyTransportContext.getBootstrap().connect(hostAddress, uriPort).sync().channel();
+            sendingChannel.pipeline().addLast(new LengthFieldPrepender(4));
 
         } catch (URISyntaxException e) {
             LOGGER.error("Error parsing address", e);
@@ -86,7 +88,22 @@ public class NettySendingTransport implements SendingTransport
     @Override
     public void submit(DriverMessage driverMessage)
     {
+        try {
+            writeAndFlush(driverMessage).sync().await();
+        } catch (InterruptedException e) {
+            LOGGER.debug("Interrupted while sending message");
+        }
+    }
 
+    @Override
+    public long offer(DriverMessage driverMessage)
+    {
+        writeAndFlush(driverMessage);
+        return 0;
+    }
+
+    private ChannelFuture writeAndFlush(DriverMessage driverMessage)
+    {
         //TODO(JAF): Figure out why multiple sends are getting condensed down to a single send
         ByteBuf nettyMessage = tlNettyMessage.get();
         nettyMessage.retain();
@@ -97,27 +114,7 @@ public class NettySendingTransport implements SendingTransport
         nettyMessage.setBytes(0, bytesToSend);
         nettyMessage.writerIndex(bytesToSend.length);
 
-        ChannelFuture future = sendingChannel.writeAndFlush(nettyMessage);
-        LOGGER.debug("Sent message of length {}", bytesToSend.length);
-        try {
-            if(future.sync().await(1000) == false)
-            {
-                LOGGER.debug("Timed out sending message");
-            }
-
-        } catch (InterruptedException e) {
-            LOGGER.debug("Interrupted while sending message");
-        }
-
-    }
-
-    @Override
-    public long offer(DriverMessage driverMessage)
-    {
-        submit(driverMessage);
-        //TODO(JAF): Support offer method with AMQP
-        //throw new UnsupportedOperationException("non-blocking submit method is not supported with this transport");
-        return 0;
+        return sendingChannel.writeAndFlush(nettyMessage);
     }
 
     @Override
